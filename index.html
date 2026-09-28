@@ -387,16 +387,40 @@
 <body>
   <div id="appStage">
     
-    <!-- iOS Camera Permission / Starter Overlay -->
-    <div id="iosCameraStarter" style="display: none; position: absolute; inset: 0; z-index: 100; background: rgba(9, 13, 22, 0.92); flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 20px;">
-      <div style="font-size: 42px;">📷</div>
-      <h3 style="font-size: 16px; color: #38bdf8;">شروع دوربین و ارزیابی بیومکانیک</h3>
-      <p style="font-size: 12px; color: #94a3b8; max-width: 320px; line-height: 1.6;">
-        جهت فعال‌سازی دوربین در آیفون (iOS Safari) و ثبت آزمون‌های هندبال، روی دکمه زیر ضربه بزنید و دسترسی را تأیید کنید.
-      </p>
-      <button type="button" id="btnIosStartCamera" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; border: 1px solid #38bdf8; border-radius: 999px; padding: 12px 28px; font-size: 14px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 18px rgba(2, 132, 199, 0.5);">
-        ⚡ شروع دوربین در آیفون / مرورگر
-      </button>
+    <!-- Camera Setup / Permission / Source Selector Modal -->
+    <div id="iosCameraStarter" style="display: none; position: absolute; inset: 0; z-index: 100; background: rgba(9, 13, 22, 0.88); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
+      <div style="position: relative; background: #0f172a; border: 1.5px solid rgba(56, 189, 248, 0.4); border-radius: 16px; padding: 24px; max-width: 440px; width: 100%; box-shadow: 0 10px 35px rgba(0,0,0,0.8), 0 0 25px rgba(56,189,248,0.2); display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center;">
+        
+        <button type="button" id="btnCloseCameraModal" style="position: absolute; top: 12px; left: 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; border-radius: 50%; width: 28px; height: 28px; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="بستن و ادامه">✕</button>
+
+        <div id="cameraModalIcon" style="font-size: 42px; line-height: 1;">📷</div>
+        <h3 id="cameraModalTitle" style="font-size: 16px; font-weight: 800; color: #38bdf8;">راه‌اندازی ورودی تصویر و بیومکانیک</h3>
+        <p id="cameraModalDesc" style="font-size: 12.5px; color: #94a3b8; line-height: 1.7;">
+          جهت ارزیابی و استعدادیابی زنده، می‌توانید وب‌کم یا دوربین را فعال کنید، یک ویدیوی آزمون بارگذاری نمایید، یا در حالت شبیه‌ساز هوشمند وارد سامانه شوید.
+        </p>
+
+        <div id="cameraStatusMsg" style="display: none; width: 100%; padding: 8px 12px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 8px; color: #fca5a5; font-size: 11.5px; line-height: 1.5;">
+          ⚠️ وب‌کم فعال یافت نشد یا دسترسی در مرورگر مجاز نشده است.
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 4px;">
+          <button type="button" id="btnIosStartCamera" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; border: 1px solid #38bdf8; border-radius: 10px; padding: 11px 18px; font-size: 13px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4); transition: all 0.2s;">
+            <span>⚡</span>
+            <span id="btnCameraText">تلاش برای اتصال به دوربین / وب‌کم</span>
+          </button>
+
+          <button type="button" id="btnModalUploadVideo" style="background: rgba(30, 41, 59, 0.9); color: #e2e8f0; border: 1px solid #475569; border-radius: 10px; padding: 10px 18px; font-size: 12.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;">
+            <span>📁</span>
+            <span>بارگذاری ویدیو از حافظه (MP4 / WebM)</span>
+          </button>
+
+          <button type="button" id="btnModalEnterSimulation" style="background: rgba(15, 23, 42, 0.8); color: #38bdf8; border: 1px dashed rgba(56, 189, 248, 0.5); border-radius: 10px; padding: 9px 18px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;">
+            <span>🧪</span>
+            <span>ورود مستقیم با شبیه‌ساز بیومکانیک (بدون دوربین)</span>
+          </button>
+        </div>
+
+      </div>
     </div>
   
     <video id="video" playsinline webkit-playsinline autoplay muted></video>
@@ -497,9 +521,12 @@
           </div>
 
           <div class="metric-grid">
-            <div class="metric-card">
-              <span class="metric-label">۱. قد ایستاده (Stature)</span>
-              <div class="metric-val" id="valAnthroHeight">-- cm</div>
+            <div class="metric-card" style="border-color: rgba(56, 189, 248, 0.4); background: rgba(2, 132, 199, 0.1);">
+              <span class="metric-label" style="color: #38bdf8; display: flex; align-items: center; justify-content: space-between;">
+                <span>۱. قد زنده تصویر / ویدیو</span>
+                <span style="font-size: 8px; background: #22c55e; color: #000; padding: 1px 4px; border-radius: 4px; font-weight: bold;">LIVE</span>
+              </span>
+              <div class="metric-val" id="valAnthroHeight" style="color: #38bdf8;">-- cm</div>
             </div>
             <div class="metric-card">
               <span class="metric-label">۲. ارتفاع نشسته & کورمیک</span>

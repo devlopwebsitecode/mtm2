@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mtm2-cache-v1-1-0';
+const CACHE_NAME = 'mtm2-cache-v1-1-2';
 const ASSETS = [
   './',
   './index.html',

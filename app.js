@@ -15,7 +15,9 @@ let isDetecting = false;
 let animFrameId = null;
 let currentCamera = 'environment';
 let isScaleLocked = false;
-let cmPerPx = 0.38; // Default scale estimation
+let cmPerPx = 0.38; // Default optical FOV scale estimation (cm per pixel)
+let liveStatureSmoothed = 0;
+let lastRawBodyHeightPx = 0;
 
 // HUD Visual Overlays Toggles
 let showSkeleton = true;
@@ -110,24 +112,58 @@ function updateAthleteUI() {
   setTxt('btnCalibHeightVal', athlete.height);
 }
 
+let starterDismissed = false;
+
 // Camera Setup with iOS Safari & Fallbacks
 async function setupCamera() {
   const starter = document.getElementById('iosCameraStarter');
   const starterBtn = document.getElementById('btnIosStartCamera');
+  const closeBtn = document.getElementById('btnCloseCameraModal');
+  const uploadModalBtn = document.getElementById('btnModalUploadVideo');
+  const simModalBtn = document.getElementById('btnModalEnterSimulation');
 
-  if (starterBtn && !starterBtn._bound) {
-    starterBtn._bound = true;
-    starterBtn.addEventListener('click', async () => {
+  if (starter && !starter._boundEvents) {
+    starter._boundEvents = true;
+
+    // Retry / Connect Camera
+    starterBtn?.addEventListener('click', async () => {
+      const btnText = document.getElementById('btnCameraText');
+      if (btnText) btnText.textContent = 'در حال جستجوی وب‌کم...';
+      const success = await requestCameraStream(true);
+      if (btnText) {
+        btnText.textContent = success ? 'دوربین متصل شد' : 'تلاش مجدد برای اتصال دوربین';
+      }
+    });
+
+    // Close Modal
+    closeBtn?.addEventListener('click', () => {
+      starterDismissed = true;
       starter.style.display = 'none';
-      await requestCameraStream();
+    });
+
+    // Upload Video
+    uploadModalBtn?.addEventListener('click', () => {
+      starterDismissed = true;
+      starter.style.display = 'none';
+      document.getElementById('videoFileInput')?.click();
+    });
+
+    // Enter Simulation
+    simModalBtn?.addEventListener('click', () => {
+      starterDismissed = true;
+      starter.style.display = 'none';
     });
   }
 
-  await requestCameraStream();
+  await requestCameraStream(false);
 }
 
-async function requestCameraStream() {
+async function requestCameraStream(isExplicitUserClick = false) {
   const starter = document.getElementById('iosCameraStarter');
+  const statusMsg = document.getElementById('cameraStatusMsg');
+  const title = document.getElementById('cameraModalTitle');
+  const icon = document.getElementById('cameraModalIcon');
+
   const constraintsList = [
     { video: { facingMode: currentCamera, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
     { video: { facingMode: currentCamera }, audio: false },
@@ -147,9 +183,21 @@ async function requestCameraStream() {
 
   if (!stream) {
     console.warn('Camera permission not granted or stream unavailable.');
-    if (starter) starter.style.display = 'flex';
-    return;
+    if (!starterDismissed || isExplicitUserClick) {
+      if (starter) starter.style.display = 'flex';
+      if (statusMsg) {
+        statusMsg.style.display = 'block';
+        statusMsg.innerHTML = '⚠️ <strong>وب‌کم فعال یافت نشد یا دسترسی در مرورگر مجاز نشده است.</strong><br>در صورتی که وب‌کم خارجی یا نرم‌افزارهای مجازی مانند Iriun Webcam دارید، از فعال بودن آن اطمینان حاصل کرده یا روی دکمه ورود بدون دوربین کلیک فرمایید.';
+      }
+      if (title) title.textContent = 'عدم دسترسی به دوربین / وب‌کم';
+      if (icon) icon.textContent = '⚠️';
+    }
+    return false;
   }
+
+  // Camera stream successfully acquired
+  starterDismissed = true;
+  if (starter) starter.style.display = 'none';
 
   videoEl.srcObject = stream;
   videoEl.setAttribute('playsinline', '');
@@ -159,13 +207,12 @@ async function requestCameraStream() {
 
   try {
     await videoEl.play();
-    if (starter) starter.style.display = 'none';
   } catch (err) {
-    console.warn('Autoplay blocked by iOS Safari:', err);
-    if (starter) starter.style.display = 'flex';
+    console.warn('Autoplay blocked:', err);
   }
 
   resizeCanvas();
+  return true;
 }
 
 function resizeCanvas() {
@@ -430,41 +477,46 @@ function processFrameBiomechanics(kp) {
   if (nose) {
     const shoulderY = (lShoulder && rShoulder) ? (lShoulder.y + rShoulder.y) / 2 : (lShoulder ? lShoulder.y : (rShoulder ? rShoulder.y : nose.y + 40));
     const headLen = Math.abs(shoulderY - nose.y);
-    crownY = nose.y - (headLen > 20 ? headLen * 0.9 : 35);
+    crownY = nose.y - (headLen > 15 ? headLen * 0.95 : 35);
   }
 
-  if (lFoot || rFoot) {
-    groundY = Math.max(lFoot ? lFoot.y : 0, rFoot ? rFoot.y : 0);
-  } else if (lAnkle || rAnkle) {
-    groundY = Math.max(lAnkle ? lAnkle.y : 0, rAnkle ? rAnkle.y : 0) + 15;
+  const footPts = [lFoot, rFoot, lAnkle, rAnkle].filter(p => p !== null && p !== undefined);
+  if (footPts.length > 0) {
+    groundY = Math.max(...footPts.map(p => p.y)) + (lFoot || rFoot ? 5 : 15);
   }
 
-  // Update Dynamic Scale if standing
+  // 1. Anthropometry Mode: Real-time Live Stature from Video
   if (crownY !== null && groundY !== null) {
     const bodyHeightPx = Math.abs(groundY - crownY);
-    if (!isScaleLocked && bodyHeightPx > 100) {
-      cmPerPx = athlete.height / bodyHeightPx;
-    }
-  }
+    lastRawBodyHeightPx = bodyHeightPx;
 
-  // 1. Anthropometry Mode
-  if (currentMode === 'anthro') {
-    // 1. Total Stature
-    if (crownY !== null && groundY !== null) {
-      const calcHeight = Math.round(Math.abs(groundY - crownY) * cmPerPx);
-      if (calcHeight > 80 && calcHeight < 240) {
+    if (bodyHeightPx > 70) {
+      // Calculate real live stature from detected pixels
+      const rawLiveHeight = bodyHeightPx * cmPerPx;
+
+      // Exponential moving average filter for natural smoothing without lag
+      if (!liveStatureSmoothed || Math.abs(rawLiveHeight - liveStatureSmoothed) > 40) {
+        liveStatureSmoothed = rawLiveHeight;
+      } else {
+        liveStatureSmoothed = (liveStatureSmoothed * 0.82) + (rawLiveHeight * 0.18);
+      }
+
+      const calcHeight = Math.round(liveStatureSmoothed * 10) / 10;
+      if (calcHeight >= 70 && calcHeight <= 250) {
         anthroData.height = calcHeight;
       }
     }
+  }
 
+  if (currentMode === 'anthro') {
     // 2. Sitting Height / Upper Body
     const midHipY = (lHip && rHip) ? (lHip.y + rHip.y) / 2 : (lHip ? lHip.y : (rHip ? rHip.y : null));
     if (crownY !== null && midHipY !== null) {
       const trunkPx = Math.abs(midHipY - crownY);
       const calcSitting = Math.round(trunkPx * cmPerPx * 10) / 10;
-      if (calcSitting > 40 && calcSitting < 130) {
+      if (calcSitting > 35 && calcSitting < 140) {
         anthroData.sittingHeight = calcSitting;
-        anthroData.cormicIndex = Math.round((calcSitting / anthroData.height) * 1000) / 10;
+        anthroData.cormicIndex = Math.round((calcSitting / Math.max(1, anthroData.height)) * 1000) / 10;
       }
     }
 
@@ -472,7 +524,7 @@ function processFrameBiomechanics(kp) {
     if (midHipY !== null && groundY !== null) {
       const legPx = Math.abs(groundY - midHipY);
       const calcLeg = Math.round(legPx * cmPerPx * 10) / 10;
-      if (calcLeg > 40 && calcLeg < 130) {
+      if (calcLeg > 35 && calcLeg < 140) {
         anthroData.trochanteric = calcLeg;
       }
     }
@@ -1239,8 +1291,16 @@ function initUIEvents() {
 
   // Stature Calibrate Button
   document.getElementById('btnCalibHeight')?.addEventListener('click', () => {
-    isScaleLocked = true;
-    alert(`مقیاس ابعادی دوربین با قد واقعی ${athlete.height}cm کالیبره و قفل گردید.`);
+    if (lastRawBodyHeightPx > 60) {
+      cmPerPx = athlete.height / lastRawBodyHeightPx;
+      isScaleLocked = true;
+      liveStatureSmoothed = athlete.height;
+      anthroData.height = athlete.height;
+      updateAnthroPanelUI();
+      alert(`✅ مقیاس دوربین با قد مرجع ${athlete.height} cm کالیبره و قفل گردید.\nضریب مقیاس اپتیکال: ${cmPerPx.toFixed(4)} cm بر پیکسل\n\nاز این پس قد هر شخص جدید، خم شدن یا حرکت در تصویر و ویدیو به صورت زنده و بلادرنگ خوانده می‌شود.`);
+    } else {
+      alert(`⚠️ بدنی با قامت ایستاده در تصویر یا ویدیو تشخیص داده نشد.\nلطفاً روبروی دوربین بایستید یا یک ویدیوی آزمون پخش نمایید و سپس روی کالیبره کلیک کنید.`);
+    }
   });
 
   // Video Upload
@@ -1250,10 +1310,13 @@ function initUIEvents() {
   fileInput?.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) {
+      liveStatureSmoothed = 0; // Reset live smoothing for the new video
       videoEl.srcObject = null;
       videoEl.src = URL.createObjectURL(file);
       videoEl.loop = true;
+      videoEl.muted = true;
       videoEl.play();
+      setAiStatus('ready', `در حال تحلیل ویدیوی آزمون: ${file.name}`);
     }
   });
 
