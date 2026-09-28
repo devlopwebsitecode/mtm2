@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>حرکت‌سنج ۲ • استعدادیابی تخصصی هندبال و آزمون‌های میدانی</title>
+  <meta name="description" content="سامانه سبک استعدادیابی ورزشی، ۱۰ شاخص تخصصی پیکرسنجی هندبال، دوی ۵ متر، پرش متوالی بوسکو، شنا، درازنشست و اسکات">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#090d16">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MTM2 هندبال">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="icon" href="icon.svg">
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100vw; height: 100%;
+      background: #090d16;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Tahoma, sans-serif;
+      color: #f8fafc;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+    ::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.4); border-radius: 999px; }
+
+    #appStage {
+      position: relative;
+      width: 100vw;
+      height: 100dvh;
+      background: #000;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    video, canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      object-fit: contain;
+    }
+
+    #topHeader {
+      position: absolute;
+      top: max(8px, env(safe-area-inset-top));
+      left: max(10px, env(safe-area-inset-left));
+      right: max(10px, env(safe-area-inset-right));
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      pointer-events: none;
+    }
+    #topHeader > * { pointer-events: auto; }
+
+    .header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 12px;
+      padding: 6px 10px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 800;
+      color: #38bdf8;
+    }
+    .brand-badge {
+      font-size: 10px;
+      background: rgba(56, 189, 248, 0.15);
+      color: #7dd3fc;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 2px 7px;
+      border-radius: 999px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-header {
+      background: rgba(30, 41, 59, 0.85);
+      color: #cbd5e1;
+      border: 1px solid #475569;
+      border-radius: 8px;
+      padding: 5px 9px;
+      font-size: 11.5px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s;
+    }
+    .btn-header:hover {
+      background: #0284c7;
+      color: #fff;
+      border-color: #38bdf8;
+    }
+    .btn-header.primary {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: #fff;
+      border-color: #38bdf8;
+      font-weight: bold;
+    }
+
+    .mode-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 2px 2px 6px 2px;
+      scrollbar-width: none;
+    }
+    .mode-bar::-webkit-scrollbar { display: none; }
+
+    .mode-pill {
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(12px);
+      border: 1px solid #334155;
+      color: #94a3b8;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 11.5px;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .mode-pill:hover {
+      background: rgba(30, 41, 59, 0.95);
+      color: #f8fafc;
+      border-color: #64748b;
+    }
+    .mode-pill.active {
+      background: #0284c7;
+      color: #ffffff;
+      border-color: #38bdf8;
+      font-weight: 700;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+    }
+
+    .test-panel {
+      position: absolute;
+      top: 96px;
+      left: 14px;
+      z-index: 40;
+      width: min(450px, calc(100vw - 28px));
+      max-height: calc(100vh - 120px);
+      background: rgba(15, 23, 42, 0.94);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 14px;
+      padding: 12px 14px;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.85);
+      overflow-y: auto;
+      resize: both;
+      min-width: 280px;
+      min-height: 48px;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 7px;
+      margin-bottom: 8px;
+      cursor: grab;
+      position: sticky;
+      top: 0;
+      background: #0f172a;
+      z-index: 10;
+    }
+    .panel-header:active { cursor: grabbing; }
+
+    .panel-title {
+      font-size: 13px;
+      font-weight: bold;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .panel-ctrls {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .ctrl-btn {
+      width: 24px; height: 24px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #cbd5e1;
+      font-size: 11px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .ctrl-btn:hover { background: #0284c7; color: #fff; border-color: #38bdf8; }
+
+    .test-panel.panel-minimized {
+      height: 46px !important;
+      max-height: 46px !important;
+      overflow: hidden !important;
+      resize: none !important;
+      padding: 8px 12px !important;
+      width: 320px !important;
+    }
+    .test-panel.panel-minimized > *:not(.panel-header) { display: none !important; }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+      margin: 8px 0;
+    }
+    .metric-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin: 8px 0;
+    }
+    .metric-card {
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 7px 6px;
+      text-align: center;
+    }
+    .metric-label {
+      font-size: 10px;
+      color: #94a3b8;
+      margin-bottom: 2px;
+      display: block;
+    }
+    .metric-val {
+      font-size: 15px;
+      font-weight: bold;
+      color: #38bdf8;
+    }
+    .metric-val.accent { color: #4ade80; }
+    .metric-val.warn { color: #facc15; }
+
+    .btn-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .btn-act {
+      flex: 1;
+      background: #0284c7;
+      color: #fff;
+      border: 1px solid #38bdf8;
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 4px;
+      transition: all 0.15s;
+    }
+    .btn-act:hover { background: #0369a1; }
+    .btn-act.secondary {
+      background: rgba(30, 41, 59, 0.85);
+      border-color: #475569;
+      color: #cbd5e1;
+    }
+    .btn-act.secondary:hover { background: #334155; color: #fff; border-color: #64748b; }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(0, 0, 0, 0.82);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+    }
+    .modal-overlay.active { display: flex; }
+
+    .modal-card {
+      background: #0f172a;
+      border: 1.5px solid #38bdf8;
+      border-radius: 16px;
+      padding: 16px;
+      width: 100%;
+      max-width: 580px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.85);
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
+    .modal-title { font-size: 15px; font-weight: bold; color: #38bdf8; }
+
+    .form-group { margin-bottom: 8px; }
+    .form-group label {
+      display: block;
+      font-size: 11px;
+      color: #94a3b8;
+      margin-bottom: 3px;
+    }
+    .form-group input, .form-group select {
+      width: 100%;
+      background: #1e293b;
+      border: 1px solid #475569;
+      border-radius: 7px;
+      padding: 7px 10px;
+      font-size: 12px;
+      color: #fff;
+      outline: none;
+    }
+    .form-group input:focus, .form-group select:focus { border-color: #38bdf8; }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    @media print {
+      body * { visibility: hidden !important; }
+      #printArea, #printArea * { visibility: visible !important; }
+      #printArea {
+        position: absolute; left: 0; top: 0; width: 100%;
+        background: #fff !important; color: #000 !important;
+        padding: 15mm;
+      }
+    }
+
+    .restore-dock {
+      position: absolute;
+      top: 54px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 90;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1.5px solid #38bdf8;
+      border-radius: 999px;
+      padding: 4px 14px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.8), 0 0 12px rgba(56, 189, 248, 0.4);
+    }
+    .restore-dock button {
+      background: #0284c7;
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="appStage">
+    
+    <!-- iOS Camera Permission / Starter Overlay -->
+    <div id="iosCameraStarter" style="display: none; position: absolute; inset: 0; z-index: 100; background: rgba(9, 13, 22, 0.92); flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 20px;">
+      <div style="font-size: 42px;">📷</div>
+      <h3 style="font-size: 16px; color: #38bdf8;">شروع دوربین و ارزیابی بیومکانیک</h3>
+      <p style="font-size: 12px; color: #94a3b8; max-width: 320px; line-height: 1.6;">
+        جهت فعال‌سازی دوربین در آیفون (iOS Safari) و ثبت آزمون‌های هندبال، روی دکمه زیر ضربه بزنید و دسترسی را تأیید کنید.
+      </p>
+      <button type="button" id="btnIosStartCamera" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; border: 1px solid #38bdf8; border-radius: 999px; padding: 12px 28px; font-size: 14px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 18px rgba(2, 132, 199, 0.5);">
+        ⚡ شروع دوربین در آیفون / مرورگر
+      </button>
+    </div>
+  
+    <video id="video" playsinline webkit-playsinline autoplay muted></video>
+    <canvas id="overlay"></canvas>
+
+    <header id="topHeader">
+      <div class="header-bar">
+        <div class="brand-title">
+          <span>🤾‍♂️ حرکت‌سنج ۲</span>
+          <span class="brand-badge">هندبال & آمادگی</span>
+        </div>
+        <div class="header-actions">
+          <button type="button" id="btnAthleteProfile" class="btn-header" title="مشخصات ورزشکار">
+            <span>👤</span>
+            <span id="hdrAthleteName">علی رضایی</span>
+          </button>
+          <button type="button" id="btnCamSwitch" class="btn-header" title="تغییر دوربین">📷</button>
+          <button type="button" id="btnUploadVideo" class="btn-header" title="بارگذاری ویدیو">📁</button>
+          <input type="file" id="videoFileInput" accept="video/*" style="display: none;">
+          <button type="button" id="btnExportReport" class="btn-header primary" title="صدور کارنامه">📑 کارنامه</button>
+        </div>
+      </div>
+
+      <nav class="mode-bar" id="modeBar">
+        <button type="button" class="mode-pill active" data-mode="anthro">
+          <span>📐</span>
+          <span>پیکرسنجی هندبال</span>
+        </button>
+        <button type="button" class="mode-pill" data-mode="run5m">
+          <span>⚡</span>
+          <span>دوی ۵ متر</span>
+        </button>
+        <button type="button" class="mode-pill" data-mode="jump">
+          <span>🦘</span>
+          <span>پرش متوالی</span>
+        </button>
+        <button type="button" class="mode-pill" data-mode="pushup">
+          <span>💪</span>
+          <span>شنا سوئدی</span>
+        </button>
+        <button type="button" class="mode-pill" data-mode="situp">
+          <span>🤸</span>
+          <span>درازنشست</span>
+        </button>
+        <button type="button" class="mode-pill" data-mode="squat">
+          <span>🦵</span>
+          <span>اسکات و لانج</span>
+        </button>
+      </nav>
+    </header>
+
+    <div id="restoreDock" class="restore-dock">
+      <span style="font-size: 11px; color: #38bdf8;">📐 پنجره آزمون کوچک شده</span>
+      <button type="button" id="dockRestoreBtn">🗖 بازگردانی پنجره</button>
+    </div>
+
+    <div id="mainTestPanel" class="test-panel">
+      <div id="panelDragHeader" class="panel-header">
+        <div class="panel-title">
+          <span style="cursor: grab; font-size: 15px;" title="برای جابجایی بکشید">⠿</span>
+          <span id="panelTitleText">📐 ۱۰ شاخص پیکرسنجی هندبال</span>
+        </div>
+        <div class="panel-ctrls">
+          <button type="button" id="panelOpacityBtn" class="ctrl-btn" title="شفافیت">👁️</button>
+          <button type="button" id="panelMinBtn" class="ctrl-btn" title="کوچک‌سازی">_</button>
+          <button type="button" id="panelResetPosBtn" class="ctrl-btn" title="موقعیت پیش‌فرض">📌</button>
+        </div>
+      </div>
+
+      <div id="panelContentBody">
+        <!-- Anthro View -->
+        <div id="viewAnthro" class="mode-view">
+          <div style="background: rgba(2, 132, 199, 0.15); border: 1px solid #0284c7; border-radius: 8px; padding: 6px 10px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 11px; color: #38bdf8;">کالیبراسیون قد زنده:</span>
+            <button type="button" id="btnCalibHeight" class="btn-header primary" style="padding: 3px 8px; font-size: 10.5px;">⚡ کالیبره با قد واقعی (<span id="btnCalibHeightVal">178</span>cm)</button>
+          </div>
+
+          <div class="metric-grid">
+            <div class="metric-card">
+              <span class="metric-label">۱. قد ایستاده (Stature)</span>
+              <div class="metric-val" id="valAnthroHeight">-- cm</div>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">۲. ارتفاع نشسته & کورمیک</span>
+              <div class="metric-val" id="valAnthroSitting">-- cm</div>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">۳. گستره بازوها (Wingspan)</span>
+              <div class="metric-val" id="valAnthroWingspan">-- cm</div>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">۴. شاخص میمونی (Ape Index)</span>
+              <div class="metric-val accent" id="valAnthroApe">--</div>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">۵. گستره کف دست (Hand Span)</span>
+              <div class="metric-val" id="valAnthroHandSpan">-- cm</div>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">توصیه توپ هندبال (IHF)</span>
+              <div class="metric-val accent" id="valAnthroBallSize">سایز ۲</div>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">۶. طول کف دست (Hand Length)</span>
+              <div class="metric-val" id="valAnthroHandLength">-- cm</div>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">۷. اهرم پرتاب (بازو+ساعد)</span>
+              <div class="metric-val" id="valAnthroArmLever">-- cm</div>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">۸. پهنای شانه (Biacromial)</span>
+              <div class="metric-val" id="valAnthroShoulder">-- cm</div>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">۹. ساق و تروکانتریک</span>
+              <div class="metric-val" id="valAnthroLeg">-- cm</div>
+            </div>
+          </div>
+
+          <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid #334155; border-radius: 8px; padding: 6px 10px; margin: 6px 0; font-size: 11px;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: #94a3b8;">۱۰. درصد چربی / LBM:</span>
+              <strong style="color: #facc15;" id="valAnthroFat">۱۴.۲٪ (۵۸.۳kg خالص)</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 3px;">
+              <span style="color: #94a3b8;">بلوغ زیستی Mirwald PHV:</span>
+              <strong style="color: #4ade80;" id="valAnthroPHV">+۱.۲ سال بعد از جهش رشد</strong>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button type="button" id="btnScanAnthro" class="btn-act">📸 اسکن و تثبیت ابعاد</button>
+            <button type="button" id="btnEditAnthroManual" class="btn-act secondary">✏️ ویرایش دستی</button>
+          </div>
+        </div>
+
+        <!-- 5m Sprint View -->
+        <div id="viewRun5m" class="mode-view" style="display: none;">
+          <p style="font-size: 11px; color: #94a3b8; margin-bottom: 6px;">
+            شروع از نقطه مبدا و عبور با حداکثر سرعت از گیت ۵ متر.
+          </p>
+          <div class="metric-grid">
+            <div class="metric-card">
+              <span class="metric-label">زمان آزمون ۵ متر</span>
+              <div class="metric-val accent" id="valRunTime" style="font-size: 24px;">0.00s</div>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">سرعت نهایی</span>
+              <div class="metric-val" id="valRunSpeed">0.0 m/s</div>
+            </div>
+          </div>
+          <div style="background: rgba(30, 41, 59, 0.7); padding: 8px; border-radius: 8px; border: 1px solid #334155; font-size: 11px; margin-bottom: 6px;">
+            وضعیت: <strong id="valRunGateStatus" style="color: #4ade80;">آماده عبور</strong> • بهترین رکورد: <strong id="valRunBest">--</strong>
+          </div>
+          <div class="btn-row">
+            <button type="button" id="btnRunReset" class="btn-act secondary">صفر کردن گیت</button>
+            <button type="button" id="btnRunSave" class="btn-act">ذخیره رکورد ۵ متر</button>
+          </div>
+        </div>
+
+        <!-- Repeated Jump (Bosco) View -->
+        <div id="viewJump" class="mode-view" style="display: none;">
+          <p style="font-size: 11px; color: #94a3b8; margin-bottom: 6px;">
+            پرش‌های عمودی متوالی: پایش زمان پرواز، زمان تماس و توان بی‌هوازی.
+          </p>
+          <div class="metric-grid-3">
+            <div class="metric-card">
+              <span class="metric-label">تعداد پرش</span>
+              <div class="metric-val accent" id="valJumpReps" style="font-size: 20px;">0</div>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">اوج ارتفاع</span>
+              <div class="metric-val" id="valJumpMaxHeight">0 cm</div>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">میانگین پرواز</span>
+              <div class="metric-val" id="valJumpAvgFlight">0 ms</div>
+            </div>
+          </div>
+          <div class="metric-grid">
+            <div class="metric-card">
+              <span class="metric-label">زمان تماس با زمین (Contact)</span>
+              <div class="metric-val warn" id="valJumpContactTime">0 ms</div>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">توان بی‌هوازی (Bosco)</span>
+              <div class="metric-val accent" id="valJumpPower">0 W/kg</div>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button type="button" id="btnJumpReset" class="btn-act secondary">صفر کردن</button>
+            <button type="button" id="btnJumpSave" class="btn-act">ثبت رکورد پرش</button>
+          </div>
+        </div>
+
+        <!-- Pushup View -->
+        <div id="viewPushup" class="mode-view" style="display: none;">
+          <div class="metric-grid">
+            <div class="metric-card">
+              <span class="metric-label">تعداد تکرار صحیح</span>
+              <div class="metric-val accent" id="valPushupReps" style="font-size: 26px;">0</div>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">زاویه آرنج</span>
+              <div class="metric-val" id="valPushupAngle">--°</div>
+            </div>
+          </div>
+          <div style="background: rgba(30, 41, 59, 0.7); padding: 7px; border-radius: 8px; border: 1px solid #334155; font-size: 11px; margin-bottom: 6px; text-align: center;">
+            وضعیت عمق آرنج: <strong id="valPushupDepthState" style="color: #38bdf8;">آماده شروع</strong>
+          </div>
+          <div class="btn-row">
+            <button type="button" id="btnPushupReset" class="btn-act secondary">صفر کردن</button>
+            <button type="button" id="btnPushupSave" class="btn-act">ثبت رکورد شنا</button>
+          </div>
+        </div>
+
+        <!-- Situp View -->
+        <div id="viewSitup" class="mode-view" style="display: none;">
+          <div class="metric-grid">
+            <div class="metric-card">
+              <span class="metric-label">تعداد درازنشست</span>
+              <div class="metric-val accent" id="valSitupReps" style="font-size: 26px;">0</div>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">زاویه بالاتنه</span>
+              <div class="metric-val" id="valSitupAngle">--°</div>
+            </div>
+          </div>
+          <div style="background: rgba(30, 41, 59, 0.7); padding: 7px; border-radius: 8px; border: 1px solid #334155; font-size: 11px; margin-bottom: 6px; text-align: center;">
+            فاز حرکت: <strong id="valSitupPhase" style="color: #38bdf8;">خوابیده به پشت</strong>
+          </div>
+          <div class="btn-row">
+            <button type="button" id="btnSitupReset" class="btn-act secondary">صفر کردن</button>
+            <button type="button" id="btnSitupSave" class="btn-act">ثبت رکورد درازنشست</button>
+          </div>
+        </div>
+
+        <!-- Squat View -->
+        <div id="viewSquat" class="mode-view" style="display: none;">
+          <div class="metric-grid">
+            <div class="metric-card">
+              <span class="metric-label">زاویه زانو</span>
+              <div class="metric-val accent" id="valSquatAngle" style="font-size: 22px;">--°</div>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">تعداد اسکات کامل</span>
+              <div class="metric-val" id="valSquatReps">0</div>
+            </div>
+          </div>
+          <div style="background: rgba(30, 41, 59, 0.7); padding: 7px; border-radius: 8px; border: 1px solid #334155; font-size: 11px; margin-bottom: 6px;">
+            <div>عمق: <strong id="valSquatDepthStatus" style="color: #4ade80;">زاویه استاندارد ۹۰ درجه</strong></div>
+            <div style="margin-top: 3px;">تراز زانو و پنجه: <strong id="valSquatValgusStatus" style="color: #38bdf8;">بدون انحراف والگوس</strong></div>
+          </div>
+          <div class="btn-row">
+            <button type="button" id="btnSquatReset" class="btn-act secondary">صفر کردن</button>
+            <button type="button" id="btnSquatSave" class="btn-act">ثبت رکورد اسکات</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Athlete Profile Modal -->
+  <div id="modalAthlete" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">👤 مشخصات و پارامترهای بیومتریک بازیکن</div>
+        <button type="button" id="btnCloseAthleteModal" class="ctrl-btn" style="color: #f87171;">✕</button>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>نام و نام خانوادگی:</label>
+          <input type="text" id="inputAthleteName" value="علی رضایی">
+        </div>
+        <div class="form-group">
+          <label>پست تخصصی هندبال:</label>
+          <select id="inputAthletePosition">
+            <option value="بغل">بغل راست / چپ (Back Player)</option>
+            <option value="بازی‌ساز">پخش‌کن و بازی‌ساز (Center Back)</option>
+            <option value="گوش">گوش راست / چپ (Wing Player)</option>
+            <option value="خط‌زن">خط‌زن (Pivot / Line Player)</option>
+            <option value="دروازه‌بان">دروازه‌بان (Goalkeeper)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>سن تقویمی (سال):</label>
+          <input type="number" id="inputAthleteAge" value="16">
+        </div>
+        <div class="form-group">
+          <label>وزن بدن (کیلوگرم):</label>
+          <input type="number" id="inputAthleteWeight" value="68">
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>قد واقعی ایستاده (cm):</label>
+          <input type="number" id="inputAthleteHeight" value="178">
+        </div>
+        <div class="form-group">
+          <label>دست برتر شوت‌زن:</label>
+          <select id="inputAthleteHand">
+            <option value="راست">دست راست (Right)</option>
+            <option value="چپ">دست چپ (Left - چپ‌دست)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>قد پدر (cm - پیش‌بینی Khamis):</label>
+          <input type="number" id="inputFatherHeight" value="182">
+        </div>
+        <div class="form-group">
+          <label>قد مادر (cm):</label>
+          <input type="number" id="inputMotherHeight" value="167">
+        </div>
+      </div>
+
+      <div class="btn-row" style="margin-top: 14px;">
+        <button type="button" id="btnSaveAthleteProfile" class="btn-act">ذخیره و اعمال در پرونده</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Export Report Modal (PDF & Excel) -->
+  <div id="modalReport" class="modal-overlay">
+    <div class="modal-card" style="max-width: 680px;">
+      <div class="modal-header">
+        <div class="modal-title">📑 صدور کارنامه جامع استعدادیابی و خروجی اکسل</div>
+        <button type="button" id="btnCloseReportModal" class="ctrl-btn" style="color: #f87171;">✕</button>
+      </div>
+
+      <!-- Printable Area -->
+      <div id="printArea" style="background: #fff; color: #0f172a; padding: 14px; border-radius: 8px; font-size: 11px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0284c7; padding-bottom: 8px; margin-bottom: 10px;">
+          <div>
+            <h2 style="font-size: 15px; color: #0284c7;">کارنامه رسمی استعدادیابی و آزمون‌های میدانی هندبال</h2>
+            <div style="font-size: 10px; color: #64748b;">سامانه حرکت‌سنج ۲ (MTM2) • استانداردهای ISAK و فدراسیون جهانی هندبال (IHF)</div>
+          </div>
+          <div style="text-align: left; font-size: 10px; color: #64748b;">
+            <div id="rptDateDisplay">تاریخ ارزیابی: ۱۴۰۵/۰۷/۰۶</div>
+            <div>شناسه ورزشکار: MTM2-8841</div>
+          </div>
+        </div>
+
+        <!-- Athlete Specs Grid -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; margin-bottom: 10px;">
+          <div>نام: <strong id="rptName">علی رضایی</strong></div>
+          <div>پست: <strong id="rptPosition">بغل راست</strong></div>
+          <div>سن / وزن: <strong id="rptAgeWeight">۱۶ سال / ۶۸ kg</strong></div>
+          <div>دست برتر: <strong id="rptHand">راست</strong></div>
+        </div>
+
+        <!-- 10 Anthro Indicators Table -->
+        <h4 style="color: #0369a1; margin-bottom: 4px; font-size: 12px;">۱. شاخص‌های تخصصی پیکرسنجی و ابعاد بدنی هندبال</h4>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 10px;">
+          <thead>
+            <tr style="background: #f1f5f9; text-align: center;">
+              <th style="border: 1px solid #cbd5e1; padding: 4px;">شاخص</th>
+              <th style="border: 1px solid #cbd5e1; padding: 4px;">مقدار</th>
+              <th style="border: 1px solid #cbd5e1; padding: 4px;">تحلیل و استاندارد هندبال</th>
+              <th style="border: 1px solid #cbd5e1; padding: 4px;">رتبه استعدادیابی</th>
+            </tr>
+          </thead>
+          <tbody id="rptAnthroTableBody">
+            <!-- Dynamic -->
+          </tbody>
+        </table>
+
+        <!-- 5 Field Kinematic Tests Table -->
+        <h4 style="color: #0369a1; margin-bottom: 4px; font-size: 12px;">۲. آزمون‌های کینماتیک و آمادگی میدانی</h4>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 10px;">
+          <thead>
+            <tr style="background: #f1f5f9; text-align: center;">
+              <th style="border: 1px solid #cbd5e1; padding: 4px;">نام آزمون</th>
+              <th style="border: 1px solid #cbd5e1; padding: 4px;">رکورد ثبت‌شده</th>
+              <th style="border: 1px solid #cbd5e1; padding: 4px;">شاخص بیومکانیک</th>
+              <th style="border: 1px solid #cbd5e1; padding: 4px;">سطح عملکرد</th>
+            </tr>
+          </thead>
+          <tbody id="rptTestsTableBody">
+            <!-- Dynamic -->
+          </tbody>
+        </table>
+
+        <div style="background: #eff6ff; border-right: 4px solid #0284c7; padding: 6px 8px; border-radius: 4px; margin-bottom: 8px; font-size: 10.5px; line-height: 1.5;">
+          <strong>توصیه تخصصی مربیگری:</strong>
+          <span id="rptRecommendationText">تناسب طول اهرم پرتاب و گستره دست با سایز ۲ هندبال بسیار مطلوب است. شتاب ۵ متر عالی و ثبات زانو در دامنه اسکات کامل ارزیابی گردید.</span>
+        </div>
+      </div>
+
+      <div class="btn-row" style="margin-top: 12px;">
+        <button type="button" id="btnDownloadPdf" class="btn-act" style="background: #dc2626; border-color: #ef4444;">
+          <span>📄</span>
+          <span>دانلود کارنامه رسمی (PDF)</span>
+        </button>
+        <button type="button" id="btnDownloadExcel" class="btn-act" style="background: #15803d; border-color: #22c55e;">
+          <span>📊</span>
+          <span>دانلود جدول اکسل (Excel / CSV)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Offline JS Libraries from Vendor -->
+  <script src="vendor/libs/tf-core.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.20.0/dist/tf-core.min.js';"></script>
+  <script src="vendor/libs/tf-converter.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter@4.20.0/dist/tf-converter.min.js';"></script>
+  <script src="vendor/libs/tf-backend-webgl.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.20.0/dist/tf-backend-webgl.min.js';"></script>
+  <script src="vendor/libs/pose-detection.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js';"></script>
+  <script src="vendor/libs/html2canvas.min.js" onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';"></script>
+  <script src="vendor/libs/jspdf.umd.min.js" onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';"></script>
+
+  <script src="app.js"></script>
+</body>
+</html>

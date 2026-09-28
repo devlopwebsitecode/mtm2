@@ -1,0 +1,13 @@
+﻿{
+  "name": "mtm2-handball-pro",
+  "version": "1.0.0",
+  "description": "سامانه سبک و مینیمال استعدادیابی و پیکرسنجی تخصصی هندبال و آزمون‌های کینماتیک میدانی (نسخه ۱.۰.۰)",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
