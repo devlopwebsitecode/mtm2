@@ -78,7 +78,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   loadAthleteFromStorage();
   initUIEvents();
-  initDraggablePanel();
+  initMobileTabs();
   initVisualToggles();
 
   // 1. Immediately start skeleton rendering loop so HUD and skeleton show in milliseconds!
@@ -109,6 +109,12 @@ function saveAthleteToStorage() {
 function updateAthleteUI() {
   const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
   setTxt('hdrAthleteName', athlete.name);
+  setTxt('cardAthleteName', athlete.name);
+  setTxt('cardAthletePosition', athlete.position);
+  setTxt('cardAthleteAge', athlete.age);
+  setTxt('cardAthleteWeight', athlete.weight + ' kg');
+  setTxt('cardAthleteHeight', athlete.height + ' cm');
+  setTxt('cardAthleteHand', athlete.hand === 'left' ? 'چپ' : 'راست');
   setTxt('rptName', athlete.name);
   setTxt('rptPosition', athlete.position);
   setTxt('rptAgeWeight', `${athlete.age} سال / ${athlete.weight} kg`);
@@ -220,9 +226,10 @@ async function requestCameraStream(isExplicitUserClick = false) {
 }
 
 function resizeCanvas() {
-  const w = videoEl.videoWidth || videoEl.clientWidth || window.innerWidth;
-  const h = videoEl.videoHeight || videoEl.clientHeight || window.innerHeight;
-  if (canvasEl.width !== w || canvasEl.height !== h) {
+  const stage = document.getElementById('cameraStage');
+  const w = stage ? stage.clientWidth : (videoEl.videoWidth || window.innerWidth);
+  const h = stage ? stage.clientHeight : (videoEl.videoHeight || window.innerHeight);
+  if (w > 0 && h > 0 && (canvasEl.width !== w || canvasEl.height !== h)) {
     canvasEl.width = w;
     canvasEl.height = h;
   }
@@ -1362,15 +1369,50 @@ function initUIEvents() {
 
   // Report Modal
   const reportModal = document.getElementById('modalReport');
-  document.getElementById('btnExportReport')?.addEventListener('click', () => {
+  const openReport = () => {
     renderReportTables();
-    reportModal.classList.add('active');
+    reportModal?.classList.add('active');
+  };
+  document.getElementById('btnExportReport')?.addEventListener('click', openReport);
+  document.getElementById('btnOpenReportModal')?.addEventListener('click', openReport);
+  document.getElementById('btnCloseReportModal')?.addEventListener('click', () => reportModal?.classList.remove('active'));
+
+  // Quick Athlete Edit from Quad 4
+  document.getElementById('btnQuickEditAthlete')?.addEventListener('click', () => {
+    document.getElementById('btnAthleteProfile')?.click();
   });
-  document.getElementById('btnCloseReportModal')?.addEventListener('click', () => reportModal.classList.remove('active'));
 
   // PDF & Excel Downloads
   document.getElementById('btnDownloadPdf')?.addEventListener('click', exportPdfReport);
+  document.getElementById('btnDownloadPdfQuick')?.addEventListener('click', exportPdfReport);
   document.getElementById('btnDownloadExcel')?.addEventListener('click', exportExcelReport);
+  document.getElementById('btnDownloadExcelQuick')?.addEventListener('click', exportExcelReport);
+}
+
+// Mobile 3-Way Tab Switcher Handler
+function initMobileTabs() {
+  const tabBtns = document.querySelectorAll('.mobile-tab-btn');
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const targetId = btn.getAttribute('data-target');
+      ['quadAnthro', 'quadTests', 'quadAthleteReport'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          if (id === targetId) {
+            el.classList.add('mobile-active');
+            el.style.display = 'flex';
+          } else {
+            el.classList.remove('mobile-active');
+            el.style.display = 'none';
+          }
+        }
+      });
+      resizeCanvas();
+    });
+  });
 }
 
 // Render Report Dynamic Tables

@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-  <title>حرکت‌سنج ۲ • استعدادیابی تخصصی هندبال و آزمون‌های میدانی</title>
-  <meta name="description" content="سامانه سبک استعدادیابی ورزشی، ۱۰ شاخص تخصصی پیکرسنجی هندبال، دوی ۵ متر، پرش متوالی بوسکو، شنا، درازنشست و اسکات">
+  <title>حرکت‌سنج ۲ • استودیو ۴ بخشی استعدادیابی هندبال و آزمون‌های میدانی</title>
+  <meta name="description" content="سامانه تخصصی استعدادیابی هندبال، ۱۰ شاخص پیکرسنجی ISAK و آزمون‌های کینماتیک شتاب، پرش بوسکو، شنا، درازنشست و اسکات">
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#090d16">
+  <meta name="theme-color" content="#070a13">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="MTM2 هندبال">
+  <meta name="apple-mobile-web-app-title" content="MTM2 استودیو">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="icon" href="icon.svg">
 
@@ -17,7 +17,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
       width: 100vw; height: 100%;
-      background: #090d16;
+      background: #070a13;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Tahoma, sans-serif;
       color: #f8fafc;
       overflow: hidden;
@@ -27,69 +27,57 @@
 
     ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
-    ::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.4); border-radius: 999px; }
+    ::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.35); border-radius: 999px; }
 
-    #appStage {
-      position: relative;
+    /* Root App Layout */
+    #appRoot {
       width: 100vw;
       height: 100dvh;
-      background: #000;
+      display: flex;
+      flex-direction: column;
+      background: #070a13;
       overflow: hidden;
-      display: flex;
-      flex-direction: column;
     }
 
-    video, canvas {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      object-fit: contain;
-    }
-
-    #topHeader {
-      position: absolute;
-      top: max(8px, env(safe-area-inset-top));
-      left: max(10px, env(safe-area-inset-left));
-      right: max(10px, env(safe-area-inset-right));
-      z-index: 50;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      pointer-events: none;
-    }
-    #topHeader > * { pointer-events: auto; }
-
-    .header-bar {
+    /* Top App Navigation Bar */
+    .top-navbar {
+      height: 48px;
+      min-height: 48px;
+      background: rgba(15, 23, 42, 0.95);
+      border-bottom: 1px solid rgba(56, 189, 248, 0.25);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: rgba(15, 23, 42, 0.88);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border: 1px solid rgba(56, 189, 248, 0.25);
-      border-radius: 12px;
-      padding: 6px 10px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+      padding: 0 12px;
+      z-index: 50;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
     }
 
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
     .brand-title {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #38bdf8;
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 13px;
-      font-weight: 800;
-      color: #38bdf8;
     }
     .brand-badge {
-      font-size: 10px;
+      font-size: 9.5px;
       background: rgba(56, 189, 248, 0.15);
       color: #7dd3fc;
       border: 1px solid rgba(56, 189, 248, 0.3);
       padding: 2px 7px;
       border-radius: 999px;
+      font-weight: 600;
     }
 
-    .header-actions {
+    .nav-actions {
       display: flex;
       align-items: center;
       gap: 6px;
@@ -101,7 +89,8 @@
       border: 1px solid #475569;
       border-radius: 8px;
       padding: 5px 9px;
-      font-size: 11.5px;
+      font-size: 11px;
+      font-weight: 600;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
@@ -120,31 +109,116 @@
       font-weight: bold;
     }
 
+    /* Studio 4-Section Grid for Desktop (A Plus/Cross Grid) */
+    .studio-quads {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 10px;
+      padding: 10px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Distinct Cross (+ sign) Dividers in Desktop */
+    .studio-quads::before {
+      content: '';
+      position: absolute;
+      top: 12px; bottom: 12px; left: 50%;
+      width: 1px;
+      background: linear-gradient(to bottom, transparent, rgba(56, 189, 248, 0.35) 15%, rgba(56, 189, 248, 0.35) 85%, transparent);
+      pointer-events: none;
+      z-index: 2;
+    }
+    .studio-quads::after {
+      content: '';
+      position: absolute;
+      left: 12px; right: 12px; top: 50%;
+      height: 1px;
+      background: linear-gradient(to right, transparent, rgba(56, 189, 248, 0.35) 15%, rgba(56, 189, 248, 0.35) 85%, transparent);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    /* Individual Quad Cells */
+    .quad-cell {
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      position: relative;
+    }
+
+    .quad-header {
+      height: 38px;
+      min-height: 38px;
+      background: rgba(30, 41, 59, 0.7);
+      border-bottom: 1px solid rgba(56, 189, 248, 0.18);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      font-size: 12px;
+      font-weight: bold;
+      color: #38bdf8;
+      flex-shrink: 0;
+    }
+
+    .quad-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 10px;
+      position: relative;
+    }
+
+    /* Camera Stage (Inside Quad 1) */
+    .camera-stage {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .camera-stage video, .camera-stage canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      object-fit: contain;
+    }
+
+    /* Mode Pill Selector (Inside Quad 3) */
     .mode-bar {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
       overflow-x: auto;
-      padding: 2px 2px 6px 2px;
+      padding: 3px 2px 8px 2px;
       scrollbar-width: none;
     }
     .mode-bar::-webkit-scrollbar { display: none; }
 
     .mode-pill {
-      background: rgba(15, 23, 42, 0.88);
-      backdrop-filter: blur(12px);
+      background: rgba(15, 23, 42, 0.85);
       border: 1px solid #334155;
       color: #94a3b8;
-      padding: 6px 12px;
+      padding: 5px 10px;
       border-radius: 999px;
-      font-size: 11.5px;
+      font-size: 11px;
       font-weight: 600;
       white-space: nowrap;
       cursor: pointer;
       transition: all 0.15s;
       display: flex;
       align-items: center;
-      gap: 5px;
+      gap: 4px;
     }
     .mode-pill:hover {
       background: rgba(30, 41, 59, 0.95);
@@ -156,98 +230,29 @@
       color: #ffffff;
       border-color: #38bdf8;
       font-weight: 700;
-      box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
     }
 
-    .test-panel {
-      position: absolute;
-      top: 96px;
-      left: 14px;
-      z-index: 40;
-      width: min(450px, calc(100vw - 28px));
-      max-height: calc(100vh - 120px);
-      background: rgba(15, 23, 42, 0.94);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-      border: 1px solid rgba(56, 189, 248, 0.4);
-      border-radius: 14px;
-      padding: 12px 14px;
-      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.85);
-      overflow-y: auto;
-      resize: both;
-      min-width: 280px;
-      min-height: 48px;
-    }
-
-    .panel-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid #334155;
-      padding-bottom: 7px;
-      margin-bottom: 8px;
-      cursor: grab;
-      position: sticky;
-      top: 0;
-      background: #0f172a;
-      z-index: 10;
-    }
-    .panel-header:active { cursor: grabbing; }
-
-    .panel-title {
-      font-size: 13px;
-      font-weight: bold;
-      color: #38bdf8;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-    .panel-ctrls {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .ctrl-btn {
-      width: 24px; height: 24px;
-      border-radius: 6px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      color: #cbd5e1;
-      font-size: 11px;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: all 0.15s;
-    }
-    .ctrl-btn:hover { background: #0284c7; color: #fff; border-color: #38bdf8; }
-
-    .test-panel.panel-minimized {
-      height: 46px !important;
-      max-height: 46px !important;
-      overflow: hidden !important;
-      resize: none !important;
-      padding: 8px 12px !important;
-      width: 320px !important;
-    }
-    .test-panel.panel-minimized > *:not(.panel-header) { display: none !important; }
-
+    /* Metric Grids */
     .metric-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 6px;
-      margin: 8px 0;
+      margin: 6px 0;
     }
     .metric-grid-3 {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 6px;
-      margin: 8px 0;
+      margin: 6px 0;
     }
     .metric-card {
-      background: rgba(30, 41, 59, 0.7);
+      background: rgba(30, 41, 59, 0.65);
       border: 1px solid #334155;
       border-radius: 8px;
-      padding: 7px 6px;
+      padding: 6px 5px;
       text-align: center;
+      transition: all 0.15s;
     }
     .metric-label {
       font-size: 10px;
@@ -256,7 +261,7 @@
       display: block;
     }
     .metric-val {
-      font-size: 15px;
+      font-size: 14.5px;
       font-weight: bold;
       color: #38bdf8;
     }
@@ -274,8 +279,8 @@
       color: #fff;
       border: 1px solid #38bdf8;
       border-radius: 8px;
-      padding: 8px;
-      font-size: 12px;
+      padding: 7px;
+      font-size: 11.5px;
       font-weight: bold;
       cursor: pointer;
       display: flex; align-items: center; justify-content: center; gap: 4px;
@@ -289,28 +294,31 @@
     }
     .btn-act.secondary:hover { background: #334155; color: #fff; border-color: #64748b; }
 
+    /* Modals */
     .modal-overlay {
       position: fixed;
       inset: 0;
       z-index: 200;
-      background: rgba(0, 0, 0, 0.82);
+      background: rgba(0, 0, 0, 0.84);
       display: none;
       align-items: center;
       justify-content: center;
       padding: 12px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
     }
     .modal-overlay.active { display: flex; }
 
     .modal-card {
       background: #0f172a;
       border: 1.5px solid #38bdf8;
-      border-radius: 16px;
-      padding: 16px;
+      border-radius: 14px;
       width: 100%;
-      max-width: 580px;
+      max-width: 520px;
       max-height: 90vh;
       overflow-y: auto;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.85);
+      padding: 16px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 30px rgba(56, 189, 248, 0.25);
     }
     .modal-header {
       display: flex;
@@ -320,208 +328,212 @@
       padding-bottom: 8px;
       margin-bottom: 12px;
     }
-    .modal-title { font-size: 15px; font-weight: bold; color: #38bdf8; }
-
-    .form-group { margin-bottom: 8px; }
-    .form-group label {
-      display: block;
+    .modal-title {
+      font-size: 13.5px;
+      font-weight: bold;
+      color: #38bdf8;
+    }
+    .ctrl-btn {
+      width: 24px; height: 24px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #cbd5e1;
       font-size: 11px;
-      color: #94a3b8;
-      margin-bottom: 3px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
     }
-    .form-group input, .form-group select {
-      width: 100%;
-      background: #1e293b;
-      border: 1px solid #475569;
-      border-radius: 7px;
-      padding: 7px 10px;
-      font-size: 12px;
-      color: #fff;
-      outline: none;
-    }
-    .form-group input:focus, .form-group select:focus { border-color: #38bdf8; }
+    .ctrl-btn:hover { background: #0284c7; color: #fff; }
+
     .form-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 8px;
     }
-
-    @media print {
-      body * { visibility: hidden !important; }
-      #printArea, #printArea * { visibility: visible !important; }
-      #printArea {
-        position: absolute; left: 0; top: 0; width: 100%;
-        background: #fff !important; color: #000 !important;
-        padding: 15mm;
-      }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
-
-    .restore-dock {
-      position: absolute;
-      top: 54px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 90;
-      background: rgba(15, 23, 42, 0.95);
-      border: 1.5px solid #38bdf8;
-      border-radius: 999px;
-      padding: 4px 14px;
-      display: none;
-      align-items: center;
-      gap: 8px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.8), 0 0 12px rgba(56, 189, 248, 0.4);
-    }
-    .restore-dock button {
-      background: #0284c7;
-      color: #fff;
-      border: none;
-      border-radius: 999px;
-      padding: 3px 10px;
+    .form-group label {
       font-size: 11px;
-      font-weight: bold;
-      cursor: pointer;
+      color: #94a3b8;
+    }
+    .form-group input, .form-group select {
+      background: #1e293b;
+      border: 1px solid #475569;
+      border-radius: 6px;
+      padding: 6px 8px;
+      color: #fff;
+      font-size: 12px;
+      outline: none;
+    }
+    .form-group input:focus, .form-group select:focus {
+      border-color: #38bdf8;
+    }
+
+    /* Mobile 2-Section Split View Specifics */
+    .mobile-tab-switch {
+      display: none;
+    }
+
+    @media (max-width: 1023px) {
+      .top-navbar {
+        height: 42px;
+        min-height: 42px;
+        padding: 0 8px;
+      }
+      .brand-badge { display: none; }
+
+      .studio-quads {
+        display: flex;
+        flex-direction: column;
+        padding: 5px;
+        gap: 6px;
+        overflow: hidden;
+      }
+      .studio-quads::before, .studio-quads::after {
+        display: none !important;
+      }
+
+      /* Upper Split: Camera & AI Pose (45% viewport height) */
+      #quadCamera {
+        height: 45dvh;
+        min-height: 220px;
+        max-height: 48dvh;
+        flex-shrink: 0;
+        border-radius: 10px;
+      }
+
+      /* Lower Split: Interactive Tabs (55% viewport height) */
+      .mobile-tab-switch {
+        display: flex;
+        height: 34px;
+        min-height: 34px;
+        background: #0f172a;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 2px;
+        margin: 2px 0;
+        gap: 3px;
+        flex-shrink: 0;
+      }
+      .mobile-tab-btn {
+        flex: 1;
+        background: transparent;
+        color: #94a3b8;
+        border: none;
+        border-radius: 6px;
+        font-size: 10.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+      }
+      .mobile-tab-btn.active {
+        background: #0284c7;
+        color: #fff;
+        font-weight: bold;
+      }
+
+      /* In mobile, Quads 2, 3, 4 switch via mobile tabs */
+      #quadAnthro, #quadTests, #quadAthleteReport {
+        flex: 1;
+        height: calc(55dvh - 50px);
+        display: none;
+        border-radius: 10px;
+      }
+      #quadAnthro.mobile-active,
+      #quadTests.mobile-active,
+      #quadAthleteReport.mobile-active {
+        display: flex;
+      }
     }
   </style>
 </head>
 
 <body>
-  <div id="appStage">
-    
-    <!-- Camera Setup / Permission / Source Selector Modal -->
-    <div id="iosCameraStarter" style="display: none; position: absolute; inset: 0; z-index: 100; background: rgba(9, 13, 22, 0.88); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
-      <div style="position: relative; background: #0f172a; border: 1.5px solid rgba(56, 189, 248, 0.4); border-radius: 16px; padding: 24px; max-width: 440px; width: 100%; box-shadow: 0 10px 35px rgba(0,0,0,0.8), 0 0 25px rgba(56,189,248,0.2); display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center;">
-        
-        <button type="button" id="btnCloseCameraModal" style="position: absolute; top: 12px; left: 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; border-radius: 50%; width: 28px; height: 28px; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" title="بستن و ادامه">✕</button>
+  <div id="appRoot">
 
-        <div id="cameraModalIcon" style="font-size: 42px; line-height: 1;">📷</div>
-        <h3 id="cameraModalTitle" style="font-size: 16px; font-weight: 800; color: #38bdf8;">راه‌اندازی ورودی تصویر و بیومکانیک</h3>
-        <p id="cameraModalDesc" style="font-size: 12.5px; color: #94a3b8; line-height: 1.7;">
-          جهت ارزیابی و استعدادیابی زنده، می‌توانید وب‌کم یا دوربین را فعال کنید، یک ویدیوی آزمون بارگذاری نمایید، یا در حالت شبیه‌ساز هوشمند وارد سامانه شوید.
-        </p>
-
-        <div id="cameraStatusMsg" style="display: none; width: 100%; padding: 8px 12px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 8px; color: #fca5a5; font-size: 11.5px; line-height: 1.5;">
-          ⚠️ وب‌کم فعال یافت نشد یا دسترسی در مرورگر مجاز نشده است.
-        </div>
-
-        <div style="display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 4px;">
-          <button type="button" id="btnIosStartCamera" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; border: 1px solid #38bdf8; border-radius: 10px; padding: 11px 18px; font-size: 13px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4); transition: all 0.2s;">
-            <span>⚡</span>
-            <span id="btnCameraText">تلاش برای اتصال به دوربین / وب‌کم</span>
-          </button>
-
-          <button type="button" id="btnModalUploadVideo" style="background: rgba(30, 41, 59, 0.9); color: #e2e8f0; border: 1px solid #475569; border-radius: 10px; padding: 10px 18px; font-size: 12.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;">
-            <span>📁</span>
-            <span>بارگذاری ویدیو از حافظه (MP4 / WebM)</span>
-          </button>
-
-          <button type="button" id="btnModalEnterSimulation" style="background: rgba(15, 23, 42, 0.8); color: #38bdf8; border: 1px dashed rgba(56, 189, 248, 0.5); border-radius: 10px; padding: 9px 18px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;">
-            <span>🧪</span>
-            <span>ورود مستقیم با شبیه‌ساز بیومکانیک (بدون دوربین)</span>
-          </button>
-        </div>
-
-      </div>
-    </div>
-  
-    <video id="video" playsinline webkit-playsinline autoplay muted></video>
-    <canvas id="overlay"></canvas>
-
-    <header id="topHeader">
-      <div class="header-bar">
+    <!-- Top Navigation Bar -->
+    <header class="top-navbar">
+      <div class="brand-section">
         <div class="brand-title">
           <span>🤾‍♂️ حرکت‌سنج ۲</span>
-          <span class="brand-badge">هندبال & آمادگی</span>
-        </div>
-        <div class="header-actions">
-          <button type="button" id="btnAthleteProfile" class="btn-header" title="مشخصات ورزشکار">
-            <span>👤</span>
-            <span id="hdrAthleteName">علی رضایی</span>
-          </button>
-          <button type="button" id="btnCamSwitch" class="btn-header" title="تغییر دوربین">📷</button>
-          <button type="button" id="btnUploadVideo" class="btn-header" title="بارگذاری ویدیو">📁</button>
-          <input type="file" id="videoFileInput" accept="video/*" style="display: none;">
-          <button type="button" id="btnExportReport" class="btn-header primary" title="صدور کارنامه">📑 کارنامه</button>
+          <span class="brand-badge">استودیوی استعدادیابی هندبال</span>
         </div>
       </div>
-
-      <nav class="mode-bar" id="modeBar">
-        <button type="button" class="mode-pill active" data-mode="anthro">
-          <span>📐</span>
-          <span>پیکرسنجی هندبال</span>
+      <div class="nav-actions">
+        <button type="button" id="btnAthleteProfile" class="btn-header" title="مشخصات ورزشکار">
+          <span>👤</span>
+          <span id="hdrAthleteName">علی رضایی</span>
         </button>
-        <button type="button" class="mode-pill" data-mode="run5m">
-          <span>⚡</span>
-          <span>دوی ۵ متر</span>
-        </button>
-        <button type="button" class="mode-pill" data-mode="jump">
-          <span>🦘</span>
-          <span>پرش متوالی</span>
-        </button>
-        <button type="button" class="mode-pill" data-mode="pushup">
-          <span>💪</span>
-          <span>شنا سوئدی</span>
-        </button>
-        <button type="button" class="mode-pill" data-mode="situp">
-          <span>🤸</span>
-          <span>درازنشست</span>
-        </button>
-        <button type="button" class="mode-pill" data-mode="squat">
-          <span>🦵</span>
-          <span>اسکات و لانج</span>
-        </button>
-      </nav>
-
-      <!-- Visual Overlays HUD Bar -->
-      <div id="hudVisualBar" style="display: flex; align-items: center; justify-content: space-between; gap: 6px; overflow-x: auto; padding: 2px 2px; font-size: 11px;">
-        <div style="display: flex; align-items: center; gap: 4px;">
-          <button type="button" id="toggleSkeleton" class="btn-header" style="background: rgba(14, 165, 233, 0.25); border-color: #38bdf8; color: #7dd3fc; font-size: 11px; padding: 4px 8px;" title="نمایش/پنهان‌سازی خطوط اسکلت بدن">
-            <span>🦴</span>
-            <span>اسکلت: فعال</span>
-          </button>
-          <button type="button" id="toggleAngles" class="btn-header" style="background: rgba(234, 179, 8, 0.25); border-color: #facc15; color: #fef08a; font-size: 11px; padding: 4px 8px;" title="نمایش/پنهان‌سازی زاویه‌های بیومکانیک مفاصل">
-            <span>📐</span>
-            <span>زاویه‌ها: فعال</span>
-          </button>
-          <button type="button" id="toggleDimensions" class="btn-header" style="background: rgba(34, 197, 94, 0.25); border-color: #4ade80; color: #bbf7d0; font-size: 11px; padding: 4px 8px;" title="نمایش قد، بالاتنه، پایین‌تنه و طول دو دست">
-            <span>📏</span>
-            <span>قد و ابعاد: فعال</span>
-          </button>
-        </div>
-        <div id="aiStatusBadge" style="display: flex; align-items: center; gap: 5px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px); border: 1px solid #334155; padding: 4px 8px; border-radius: 8px; font-size: 10.5px; color: #38bdf8; white-space: nowrap;">
-          <span id="aiStatusDot" style="width: 8px; height: 8px; border-radius: 50%; background: #eab308; box-shadow: 0 0 8px #eab308; display: inline-block;"></span>
-          <span id="aiStatusText">در حال اتصال به هوش مصنوعی...</span>
-        </div>
+        <button type="button" id="btnCamSwitch" class="btn-header" title="تغییر دوربین">📷</button>
+        <button type="button" id="btnUploadVideo" class="btn-header" title="بارگذاری ویدیو">📁</button>
+        <input type="file" id="videoFileInput" accept="video/*" style="display: none;">
+        <button type="button" id="btnExportReport" class="btn-header primary" title="صدور کارنامه">📑 کارنامه</button>
       </div>
     </header>
 
-    <div id="restoreDock" class="restore-dock">
-      <span style="font-size: 11px; color: #38bdf8;">📐 پنجره آزمون کوچک شده</span>
-      <button type="button" id="dockRestoreBtn">🗖 بازگردانی پنجره</button>
+    <!-- Mobile 3-Way Tab Switcher (Visible only on mobile devices) -->
+    <div class="mobile-tab-switch" id="mobileTabSwitch">
+      <button type="button" class="mobile-tab-btn active" data-target="quadAnthro">
+        <span>📐 ۱۰ شاخص</span>
+      </button>
+      <button type="button" class="mobile-tab-btn" data-target="quadTests">
+        <span>⚡ آزمون‌های میدانی</span>
+      </button>
+      <button type="button" class="mobile-tab-btn" data-target="quadAthleteReport">
+        <span>👤 ورزشکار & کارنامه</span>
+      </button>
     </div>
 
-    <div id="mainTestPanel" class="test-panel">
-      <div id="panelDragHeader" class="panel-header">
-        <div class="panel-title">
-          <span style="cursor: grab; font-size: 15px;" title="برای جابجایی بکشید">⠿</span>
-          <span id="panelTitleText">📐 ۱۰ شاخص پیکرسنجی هندبال</span>
-        </div>
-        <div class="panel-ctrls">
-          <button type="button" id="panelOpacityBtn" class="ctrl-btn" title="شفافیت">👁️</button>
-          <button type="button" id="panelMinBtn" class="ctrl-btn" title="کوچک‌سازی">_</button>
-          <button type="button" id="panelResetPosBtn" class="ctrl-btn" title="موقعیت پیش‌فرض">📌</button>
-        </div>
-      </div>
+    <!-- Main Studio Grid (Desktop: 4 Quads in a Plus/Cross Grid | Mobile: 2 Distinct Sections) -->
+    <main class="studio-quads" id="studioQuads">
 
-      <div id="panelContentBody">
-        <!-- Anthro View -->
-        <div id="viewAnthro" class="mode-view">
-          <div style="background: rgba(2, 132, 199, 0.15); border: 1px solid #0284c7; border-radius: 8px; padding: 6px 10px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
-            <span style="font-size: 11px; color: #38bdf8;">کالیبراسیون قد زنده:</span>
-            <button type="button" id="btnCalibHeight" class="btn-header primary" style="padding: 3px 8px; font-size: 10.5px;">⚡ کالیبره با قد واقعی (<span id="btnCalibHeightVal">178</span>cm)</button>
+      <!-- QUAD 1: Camera & Biomechanical Pose Overlay (Top-Right in RTL) -->
+      <section class="quad-cell" id="quadCamera">
+        <div class="quad-header">
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <button type="button" id="toggleSkeleton" class="btn-header" style="background: rgba(14, 165, 233, 0.25); border-color: #38bdf8; color: #7dd3fc; font-size: 10px; padding: 2px 6px;" title="اسکلت">
+              <span>🦴 اسکلت</span>
+            </button>
+            <button type="button" id="toggleAngles" class="btn-header" style="background: rgba(234, 179, 8, 0.25); border-color: #facc15; color: #fef08a; font-size: 10px; padding: 2px 6px;" title="زاویه‌ها">
+              <span>📐 زوایا</span>
+            </button>
+            <button type="button" id="toggleDimensions" class="btn-header" style="background: rgba(34, 197, 94, 0.25); border-color: #4ade80; color: #bbf7d0; font-size: 10px; padding: 2px 6px;" title="قد و ابعاد">
+              <span>📏 ابعاد</span>
+            </button>
           </div>
+          <div id="aiStatusBadge" style="display: flex; align-items: center; gap: 4px; font-size: 10px; color: #38bdf8;">
+            <span id="aiStatusDot" style="width: 7px; height: 7px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 6px #22c55e; display: inline-block;"></span>
+            <span id="aiStatusText">هوش مصنوعی فعال</span>
+          </div>
+        </div>
+        <div class="quad-body" style="padding: 4px;">
+          <div class="camera-stage" id="cameraStage">
+            <video id="video" playsinline webkit-playsinline autoplay muted></video>
+            <canvas id="overlay"></canvas>
+          </div>
+        </div>
+      </section>
 
+      <!-- QUAD 2: 10 Handball Anthropometric Indicators (Top-Left in RTL) -->
+      <section class="quad-cell mobile-active" id="quadAnthro">
+        <div class="quad-header">
+          <span>📐 ۱۰ شاخص پیکرسنجی هندبال (ISAK & IHF)</span>
+          <button type="button" id="btnCalibHeight" class="btn-header primary" style="padding: 2px 7px; font-size: 10px;">
+            ⚡ کالیبره (<span id="btnCalibHeightVal">178</span>cm)
+          </button>
+        </div>
+        <div class="quad-body">
           <div class="metric-grid">
-            <div class="metric-card" style="border-color: rgba(56, 189, 248, 0.4); background: rgba(2, 132, 199, 0.1);">
+            <div class="metric-card" style="border-color: rgba(56, 189, 248, 0.4); background: rgba(2, 132, 199, 0.12);">
               <span class="metric-label" style="color: #38bdf8; display: flex; align-items: center; justify-content: space-between;">
                 <span>۱. قد زنده تصویر / ویدیو</span>
                 <span style="font-size: 8px; background: #22c55e; color: #000; padding: 1px 4px; border-radius: 4px; font-weight: bold;">LIVE</span>
@@ -565,146 +577,243 @@
               <div class="metric-val" id="valAnthroLeg">-- cm</div>
             </div>
           </div>
-
-          <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid #334155; border-radius: 8px; padding: 6px 10px; margin: 6px 0; font-size: 11px;">
-            <div style="display: flex; justify-content: space-between;">
-              <span style="color: #94a3b8;">۱۰. درصد چربی / LBM:</span>
-              <strong style="color: #facc15;" id="valAnthroFat">۱۴.۲٪ (۵۸.۳kg خالص)</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-top: 3px;">
-              <span style="color: #94a3b8;">بلوغ زیستی Mirwald PHV:</span>
-              <strong style="color: #4ade80;" id="valAnthroPHV">+۱.۲ سال بعد از جهش رشد</strong>
+          <div class="metric-card" style="margin-top: 4px;">
+            <div style="display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8;">
+              <span>۱۰. درصد چربی / LBM: <strong id="valAnthroFatLbm" style="color: #facc15;">۱۴.۲٪ (۵۸.۳kg خالص)</strong></span>
+              <span>بلوغ زیستی Mirwald: <strong id="valAnthroPhv" style="color: #4ade80;">+۱.۲ سال</strong></span>
             </div>
           </div>
-
           <div class="btn-row">
             <button type="button" id="btnScanAnthro" class="btn-act">📸 اسکن و تثبیت ابعاد</button>
             <button type="button" id="btnEditAnthroManual" class="btn-act secondary">✏️ ویرایش دستی</button>
           </div>
         </div>
+      </section>
 
-        <!-- 5m Sprint View -->
-        <div id="viewRun5m" class="mode-view" style="display: none;">
-          <p style="font-size: 11px; color: #94a3b8; margin-bottom: 6px;">
-            شروع از نقطه مبدا و عبور با حداکثر سرعت از گیت ۵ متر.
-          </p>
-          <div class="metric-grid">
-            <div class="metric-card">
-              <span class="metric-label">زمان آزمون ۵ متر</span>
-              <div class="metric-val accent" id="valRunTime" style="font-size: 24px;">0.00s</div>
+      <!-- QUAD 3: Kinematic Tests Selector & Live Monitor (Bottom-Right in RTL) -->
+      <section class="quad-cell" id="quadTests">
+        <div class="quad-header">
+          <span id="panelTitleText">⚡ انتخاب آزمون حرکتی و کینماتیک</span>
+        </div>
+        <div class="quad-body">
+          <!-- Mode Bar -->
+          <nav class="mode-bar" id="modeBar">
+            <button type="button" class="mode-pill active" data-mode="anthro">
+              <span>📐 پیکرسنجی</span>
+            </button>
+            <button type="button" class="mode-pill" data-mode="run5m">
+              <span>⚡ دوی ۵ متر</span>
+            </button>
+            <button type="button" class="mode-pill" data-mode="jump">
+              <span>🦘 پرش متوالی</span>
+            </button>
+            <button type="button" class="mode-pill" data-mode="pushup">
+              <span>💪 شنا سوئدی</span>
+            </button>
+            <button type="button" class="mode-pill" data-mode="situp">
+              <span>🤸 درازنشست</span>
+            </button>
+            <button type="button" class="mode-pill" data-mode="squat">
+              <span>🦵 اسکات و لانج</span>
+            </button>
+          </nav>
+
+          <!-- 5m Sprint View -->
+          <div id="viewRun5m" class="mode-view" style="display: none;">
+            <div class="metric-grid">
+              <div class="metric-card">
+                <span class="metric-label">زمان آزمون ۵ متر</span>
+                <div class="metric-val accent" id="valRunTime" style="font-size: 22px;">0.00s</div>
+              </div>
+              <div class="metric-card">
+                <span class="metric-label">سرعت نهایی</span>
+                <div class="metric-val" id="valRunSpeed">0.0 m/s</div>
+              </div>
             </div>
-            <div class="metric-card">
-              <span class="metric-label">سرعت نهایی</span>
-              <div class="metric-val" id="valRunSpeed">0.0 m/s</div>
+            <div style="background: rgba(30, 41, 59, 0.7); padding: 6px; border-radius: 8px; border: 1px solid #334155; font-size: 10.5px; margin-bottom: 6px;">
+              وضعیت: <strong id="valRunGateStatus" style="color: #4ade80;">آماده عبور</strong> • بهترین رکورد: <strong id="valRunBest">--</strong>
+            </div>
+            <div class="btn-row">
+              <button type="button" id="btnRunReset" class="btn-act secondary">صفر کردن گیت</button>
+              <button type="button" id="btnRunSave" class="btn-act">ذخیره رکورد ۵ متر</button>
             </div>
           </div>
-          <div style="background: rgba(30, 41, 59, 0.7); padding: 8px; border-radius: 8px; border: 1px solid #334155; font-size: 11px; margin-bottom: 6px;">
-            وضعیت: <strong id="valRunGateStatus" style="color: #4ade80;">آماده عبور</strong> • بهترین رکورد: <strong id="valRunBest">--</strong>
+
+          <!-- Repeated Jump (Bosco) View -->
+          <div id="viewJump" class="mode-view" style="display: none;">
+            <div class="metric-grid-3">
+              <div class="metric-card">
+                <span class="metric-label">تعداد پرش</span>
+                <div class="metric-val accent" id="valJumpReps" style="font-size: 18px;">0</div>
+              </div>
+              <div class="metric-card">
+                <span class="metric-label">اوج ارتفاع</span>
+                <div class="metric-val" id="valJumpMaxHeight">0 cm</div>
+              </div>
+              <div class="metric-card">
+                <span class="metric-label">میانگین پرواز</span>
+                <div class="metric-val" id="valJumpAvgFlight">0 ms</div>
+              </div>
+            </div>
+            <div class="metric-grid">
+              <div class="metric-card">
+                <span class="metric-label">زمان تماس با زمین</span>
+                <div class="metric-val warn" id="valJumpContactTime">0 ms</div>
+              </div>
+              <div class="metric-card">
+                <span class="metric-label">توان بی‌هوازی</span>
+                <div class="metric-val accent" id="valJumpPower">0 W/kg</div>
+              </div>
+            </div>
+            <div class="btn-row">
+              <button type="button" id="btnJumpReset" class="btn-act secondary">صفر کردن</button>
+              <button type="button" id="btnJumpSave" class="btn-act">ثبت رکورد پرش</button>
+            </div>
           </div>
-          <div class="btn-row">
-            <button type="button" id="btnRunReset" class="btn-act secondary">صفر کردن گیت</button>
-            <button type="button" id="btnRunSave" class="btn-act">ذخیره رکورد ۵ متر</button>
+
+          <!-- Pushup View -->
+          <div id="viewPushup" class="mode-view" style="display: none;">
+            <div class="metric-grid">
+              <div class="metric-card">
+                <span class="metric-label">تعداد تکرار صحیح</span>
+                <div class="metric-val accent" id="valPushupReps" style="font-size: 22px;">0</div>
+              </div>
+              <div class="metric-card">
+                <span class="metric-label">زاویه آرنج</span>
+                <div class="metric-val" id="valPushupAngle">--°</div>
+              </div>
+            </div>
+            <div style="background: rgba(30, 41, 59, 0.7); padding: 6px; border-radius: 8px; border: 1px solid #334155; font-size: 10.5px; margin-bottom: 6px; text-align: center;">
+              عمق آرنج: <strong id="valPushupDepthState" style="color: #38bdf8;">آماده شروع</strong>
+            </div>
+            <div class="btn-row">
+              <button type="button" id="btnPushupReset" class="btn-act secondary">صفر کردن</button>
+              <button type="button" id="btnPushupSave" class="btn-act">ثبت رکورد شنا</button>
+            </div>
+          </div>
+
+          <!-- Situp View -->
+          <div id="viewSitup" class="mode-view" style="display: none;">
+            <div class="metric-grid">
+              <div class="metric-card">
+                <span class="metric-label">تعداد درازنشست</span>
+                <div class="metric-val accent" id="valSitupReps" style="font-size: 22px;">0</div>
+              </div>
+              <div class="metric-card">
+                <span class="metric-label">زاویه بالاتنه</span>
+                <div class="metric-val" id="valSitupAngle">--°</div>
+              </div>
+            </div>
+            <div style="background: rgba(30, 41, 59, 0.7); padding: 6px; border-radius: 8px; border: 1px solid #334155; font-size: 10.5px; margin-bottom: 6px; text-align: center;">
+              فاز حرکت: <strong id="valSitupPhase" style="color: #38bdf8;">خوابیده به پشت</strong>
+            </div>
+            <div class="btn-row">
+              <button type="button" id="btnSitupReset" class="btn-act secondary">صفر کردن</button>
+              <button type="button" id="btnSitupSave" class="btn-act">ثبت رکورد درازنشست</button>
+            </div>
+          </div>
+
+          <!-- Squat View -->
+          <div id="viewSquat" class="mode-view" style="display: none;">
+            <div class="metric-grid">
+              <div class="metric-card">
+                <span class="metric-label">تکرار اسکات صحیح</span>
+                <div class="metric-val accent" id="valSquatReps" style="font-size: 22px;">0</div>
+              </div>
+              <div class="metric-card">
+                <span class="metric-label">زاویه زانو</span>
+                <div class="metric-val" id="valSquatAngle">--°</div>
+              </div>
+            </div>
+            <div style="background: rgba(30, 41, 59, 0.7); padding: 6px; border-radius: 8px; border: 1px solid #334155; font-size: 10.5px; margin-bottom: 6px;">
+              <div>عمق: <strong id="valSquatDepthStatus" style="color: #4ade80;">زاویه استاندارد ۹۰ درجه</strong></div>
+              <div style="margin-top: 2px;">تراز زانو: <strong id="valSquatValgusStatus" style="color: #38bdf8;">بدون انحراف والگوس</strong></div>
+            </div>
+            <div class="btn-row">
+              <button type="button" id="btnSquatReset" class="btn-act secondary">صفر کردن</button>
+              <button type="button" id="btnSquatSave" class="btn-act">ثبت رکورد اسکات</button>
+            </div>
+          </div>
+
+          <!-- Default Anthro Helper Note -->
+          <div id="viewAnthroNote" style="background: rgba(30, 41, 59, 0.4); border: 1px dashed #334155; border-radius: 8px; padding: 8px; font-size: 11px; color: #94a3b8; line-height: 1.6; margin-top: 6px;">
+            ℹ️ هم‌اکنون حالت <strong>پیکرسنجی هندبال</strong> فعال است. شاخص‌های ۱۰گانه در بخش مجاور به صورت ریل‌تایم محاسبه می‌شوند. جهت ارزیابی میدانی روی تب‌های بالا (دوی ۵ متر، پرش و...) کلیک فرمایید.
           </div>
         </div>
+      </section>
 
-        <!-- Repeated Jump (Bosco) View -->
-        <div id="viewJump" class="mode-view" style="display: none;">
-          <p style="font-size: 11px; color: #94a3b8; margin-bottom: 6px;">
-            پرش‌های عمودی متوالی: پایش زمان پرواز، زمان تماس و توان بی‌هوازی.
-          </p>
-          <div class="metric-grid-3">
-            <div class="metric-card">
-              <span class="metric-label">تعداد پرش</span>
-              <div class="metric-val accent" id="valJumpReps" style="font-size: 20px;">0</div>
+      <!-- QUAD 4: Athlete Hub & Official Report Export (Bottom-Left in RTL) -->
+      <section class="quad-cell" id="quadAthleteReport">
+        <div class="quad-header">
+          <span>👤 مشخصات ورزشکار & کارنامه استعدادیابی</span>
+          <button type="button" id="btnQuickEditAthlete" class="btn-header" style="padding: 2px 7px; font-size: 10px;">
+            ✏️ ویرایش
+          </button>
+        </div>
+        <div class="quad-body">
+          <!-- Athlete Quick Info Card -->
+          <div style="background: rgba(30, 41, 59, 0.6); border: 1px solid #334155; border-radius: 8px; padding: 8px; margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-size: 13px; font-weight: bold; color: #38bdf8;" id="cardAthleteName">علی رضایی</span>
+              <span style="font-size: 11px; background: rgba(56, 189, 248, 0.2); color: #7dd3fc; padding: 2px 6px; border-radius: 4px;" id="cardAthletePosition">بغل راست</span>
             </div>
-            <div class="metric-card">
-              <span class="metric-label">اوج ارتفاع</span>
-              <div class="metric-val" id="valJumpMaxHeight">0 cm</div>
-            </div>
-            <div class="metric-card">
-              <span class="metric-label">میانگین پرواز</span>
-              <div class="metric-val" id="valJumpAvgFlight">0 ms</div>
-            </div>
-          </div>
-          <div class="metric-grid">
-            <div class="metric-card">
-              <span class="metric-label">زمان تماس با زمین (Contact)</span>
-              <div class="metric-val warn" id="valJumpContactTime">0 ms</div>
-            </div>
-            <div class="metric-card">
-              <span class="metric-label">توان بی‌هوازی (Bosco)</span>
-              <div class="metric-val accent" id="valJumpPower">0 W/kg</div>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; font-size: 10.5px; color: #cbd5e1; text-align: center;">
+              <div>سن: <strong id="cardAthleteAge">۱۶</strong></div>
+              <div>وزن: <strong id="cardAthleteWeight">۶۸kg</strong></div>
+              <div>قد: <strong id="cardAthleteHeight">۱۷۸cm</strong></div>
+              <div>دست: <strong id="cardAthleteHand">راست</strong></div>
             </div>
           </div>
-          <div class="btn-row">
-            <button type="button" id="btnJumpReset" class="btn-act secondary">صفر کردن</button>
-            <button type="button" id="btnJumpSave" class="btn-act">ثبت رکورد پرش</button>
+
+          <!-- Talent Coaching Recommendation -->
+          <div style="background: rgba(2, 132, 199, 0.12); border-right: 3px solid #0284c7; border-radius: 4px; padding: 6px 8px; font-size: 11px; color: #e2e8f0; line-height: 1.6; margin-bottom: 8px;">
+            <strong>توصیه استعدادیابی هندبال:</strong>
+            <span id="quickCoachingText">گستره بازو و اهرم پرتاب متناسب با پست بغل. شایستگی در دست‌گیری توپ سایز ۲ تأیید شده است.</span>
+          </div>
+
+          <!-- Report Export Actions -->
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <button type="button" id="btnOpenReportModal" class="btn-act" style="background: linear-gradient(135deg, #0284c7, #0369a1);">
+              <span>📑 مشاهده و چاپ کارنامه رسمی استعدادیابی</span>
+            </button>
+            <div style="display: flex; gap: 6px;">
+              <button type="button" id="btnDownloadPdfQuick" class="btn-act" style="background: #dc2626; border-color: #ef4444; font-size: 11px;">
+                <span>📄 دانلود PDF</span>
+              </button>
+              <button type="button" id="btnDownloadExcelQuick" class="btn-act" style="background: #15803d; border-color: #22c55e; font-size: 11px;">
+                <span>📊 دانلود اکسل (CSV)</span>
+              </button>
+            </div>
           </div>
         </div>
+      </section>
 
-        <!-- Pushup View -->
-        <div id="viewPushup" class="mode-view" style="display: none;">
-          <div class="metric-grid">
-            <div class="metric-card">
-              <span class="metric-label">تعداد تکرار صحیح</span>
-              <div class="metric-val accent" id="valPushupReps" style="font-size: 26px;">0</div>
-            </div>
-            <div class="metric-card">
-              <span class="metric-label">زاویه آرنج</span>
-              <div class="metric-val" id="valPushupAngle">--°</div>
-            </div>
-          </div>
-          <div style="background: rgba(30, 41, 59, 0.7); padding: 7px; border-radius: 8px; border: 1px solid #334155; font-size: 11px; margin-bottom: 6px; text-align: center;">
-            وضعیت عمق آرنج: <strong id="valPushupDepthState" style="color: #38bdf8;">آماده شروع</strong>
-          </div>
-          <div class="btn-row">
-            <button type="button" id="btnPushupReset" class="btn-act secondary">صفر کردن</button>
-            <button type="button" id="btnPushupSave" class="btn-act">ثبت رکورد شنا</button>
-          </div>
-        </div>
+    </main>
 
-        <!-- Situp View -->
-        <div id="viewSitup" class="mode-view" style="display: none;">
-          <div class="metric-grid">
-            <div class="metric-card">
-              <span class="metric-label">تعداد درازنشست</span>
-              <div class="metric-val accent" id="valSitupReps" style="font-size: 26px;">0</div>
-            </div>
-            <div class="metric-card">
-              <span class="metric-label">زاویه بالاتنه</span>
-              <div class="metric-val" id="valSitupAngle">--°</div>
-            </div>
-          </div>
-          <div style="background: rgba(30, 41, 59, 0.7); padding: 7px; border-radius: 8px; border: 1px solid #334155; font-size: 11px; margin-bottom: 6px; text-align: center;">
-            فاز حرکت: <strong id="valSitupPhase" style="color: #38bdf8;">خوابیده به پشت</strong>
-          </div>
-          <div class="btn-row">
-            <button type="button" id="btnSitupReset" class="btn-act secondary">صفر کردن</button>
-            <button type="button" id="btnSitupSave" class="btn-act">ثبت رکورد درازنشست</button>
-          </div>
-        </div>
+  </div>
 
-        <!-- Squat View -->
-        <div id="viewSquat" class="mode-view" style="display: none;">
-          <div class="metric-grid">
-            <div class="metric-card">
-              <span class="metric-label">زاویه زانو</span>
-              <div class="metric-val accent" id="valSquatAngle" style="font-size: 22px;">--°</div>
-            </div>
-            <div class="metric-card">
-              <span class="metric-label">تعداد اسکات کامل</span>
-              <div class="metric-val" id="valSquatReps">0</div>
-            </div>
-          </div>
-          <div style="background: rgba(30, 41, 59, 0.7); padding: 7px; border-radius: 8px; border: 1px solid #334155; font-size: 11px; margin-bottom: 6px;">
-            <div>عمق: <strong id="valSquatDepthStatus" style="color: #4ade80;">زاویه استاندارد ۹۰ درجه</strong></div>
-            <div style="margin-top: 3px;">تراز زانو و پنجه: <strong id="valSquatValgusStatus" style="color: #38bdf8;">بدون انحراف والگوس</strong></div>
-          </div>
-          <div class="btn-row">
-            <button type="button" id="btnSquatReset" class="btn-act secondary">صفر کردن</button>
-            <button type="button" id="btnSquatSave" class="btn-act">ثبت رکورد اسکات</button>
-          </div>
-        </div>
+  <!-- Camera Setup / Source Selector Modal -->
+  <div id="iosCameraStarter" style="display: none; position: absolute; inset: 0; z-index: 100; background: rgba(9, 13, 22, 0.88); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
+    <div style="position: relative; background: #0f172a; border: 1.5px solid rgba(56, 189, 248, 0.4); border-radius: 16px; padding: 24px; max-width: 440px; width: 100%; box-shadow: 0 10px 35px rgba(0,0,0,0.8), 0 0 25px rgba(56,189,248,0.2); display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center;">
+      <button type="button" id="btnCloseCameraModal" style="position: absolute; top: 12px; left: 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; border-radius: 50%; width: 28px; height: 28px; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="بستن">✕</button>
+      <div id="cameraModalIcon" style="font-size: 40px; line-height: 1;">📷</div>
+      <h3 id="cameraModalTitle" style="font-size: 15.5px; font-weight: 800; color: #38bdf8;">راه‌اندازی ورودی تصویر و بیومکانیک</h3>
+      <p id="cameraModalDesc" style="font-size: 12px; color: #94a3b8; line-height: 1.6;">
+        جهت ارزیابی زنده، وب‌کم را فعال کنید، یک ویدیو بارگذاری نمایید یا در حالت شبیه‌ساز وارد سامانه شوید.
+      </p>
+      <div id="cameraStatusMsg" style="display: none; width: 100%; padding: 8px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 8px; color: #fca5a5; font-size: 11px;">
+        ⚠️ وب‌کم فعال یافت نشد یا دسترسی در مرورگر مجاز نشده است.
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+        <button type="button" id="btnIosStartCamera" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; border: 1px solid #38bdf8; border-radius: 10px; padding: 10px; font-size: 12.5px; font-weight: bold; cursor: pointer;">
+          <span id="btnCameraText">⚡ تلاش برای اتصال به دوربین / وب‌کم</span>
+        </button>
+        <button type="button" id="btnModalUploadVideo" style="background: rgba(30, 41, 59, 0.9); color: #e2e8f0; border: 1px solid #475569; border-radius: 10px; padding: 9px; font-size: 12px; font-weight: 600; cursor: pointer;">
+          📁 بارگذاری ویدیو از حافظه (MP4 / WebM)
+        </button>
+        <button type="button" id="btnModalEnterSimulation" style="background: rgba(15, 23, 42, 0.8); color: #38bdf8; border: 1px dashed rgba(56, 189, 248, 0.5); border-radius: 10px; padding: 8px; font-size: 11.5px; font-weight: 600; cursor: pointer;">
+          🧪 ورود مستقیم با شبیه‌ساز بیومکانیک (بدون دوربین)
+        </button>
       </div>
     </div>
   </div>
