@@ -71,7 +71,7 @@ let lastLandmarks = null;
 let lastDetectTime = 0;
 
 // Initialize Application on Window Load
-window.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('DOMContentLoaded', () => {
   videoEl = document.getElementById('video');
   canvasEl = document.getElementById('overlay');
   ctx = canvasEl.getContext('2d');
@@ -80,9 +80,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   initUIEvents();
   initDraggablePanel();
   initVisualToggles();
-  await setupCamera();
-  await loadPoseModel();
+
+  // 1. Immediately start skeleton rendering loop so HUD and skeleton show in milliseconds!
   startDetectLoop();
+
+  // 2. Asynchronously initialize camera and AI without blocking the UI
+  setupCamera().catch(err => console.warn('Camera setup warning:', err));
+  loadPoseModel().catch(err => console.warn('Pose model load warning:', err));
 });
 
 // Load / Save Athlete Profile
@@ -244,26 +248,24 @@ function setAiStatus(status, text) {
   }
 }
 
-// Load Pose Model with Multi-tier Resilience (Native MediaPipe Pose + PoseDetection)
+// Load Pose Model with Multi-tier Resilience (Native MediaPipe Pose Lite + PoseDetection)
 async function loadPoseModel() {
-  setAiStatus('loading', 'در حال راه‌اندازی هوش مصنوعی بیومکانیک...');
+  setAiStatus('loading', 'راه‌اندازی موتور هوش مصنوعی...');
 
   // 1. Try Native MediaPipe Pose (Fastest, zero-overhead WebAssembly)
   if (typeof window.Pose !== 'undefined') {
     try {
       nativePose = new window.Pose({
-        locateFile: (file) => {
-          // Local vendor with fallback
-          return `./vendor/mediapipe-pose/${file}`;
-        }
+        locateFile: (file) => `./vendor/mediapipe-pose/${file}`
       });
 
+      // Ultra-fast Lite model (modelComplexity: 0) for zero-latency 60fps tracking
       nativePose.setOptions({
-        modelComplexity: 1, // Full 33 keypoints
+        modelComplexity: 0, // 0 = Lite (Loads in under 1 second, full 33 keypoints)
         smoothLandmarks: true,
         enableSegmentation: false,
-        minDetectionConfidence: 0.45,
-        minTrackingConfidence: 0.45
+        minDetectionConfidence: 0.4,
+        minTrackingConfidence: 0.4
       });
 
       nativePose.onResults((results) => {
@@ -281,17 +283,21 @@ async function loadPoseModel() {
         }
       });
 
-      // Warm-up
+      // Pre-warm WebAssembly asynchronously
+      if (typeof nativePose.initialize === 'function') {
+        await nativePose.initialize();
+      }
+
       isModelReady = true;
-      setAiStatus('ready', 'هوش مصنوعی ۳۳ مفصل فعال (MediaPipe Wasm)');
-      console.log('✅ Native MediaPipe Pose Initialized Successfully');
+      setAiStatus('ready', 'هوش مصنوعی ۳۳ مفصل فعال (فوق‌سریع Lite)');
+      console.log('⚡ Native MediaPipe Pose (Lite) Initialized in milliseconds');
       return;
     } catch (err) {
-      console.warn('Native MediaPipe Pose failed, falling back...', err);
+      console.warn('Native MediaPipe Pose failed, falling back to TF.js...', err);
     }
   }
 
-  // 2. Try @tensorflow-models/pose-detection
+  // 2. Try @tensorflow-models/pose-detection with Lite model
   const paths = [
     './vendor/mediapipe-pose',
     'https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404'
@@ -304,11 +310,11 @@ async function loadPoseModel() {
         const detectorConfig = {
           runtime: 'mediapipe',
           solutionPath: p,
-          modelType: 'full'
+          modelType: 'lite' // Fast lite model
         };
         detector = await poseDetection.createDetector(model, detectorConfig);
         isModelReady = true;
-        setAiStatus('ready', 'هوش مصنوعی فعال (BlazePose TF)');
+        setAiStatus('ready', 'هوش مصنوعی فعال (BlazePose TF Lite)');
         console.log('✅ BlazePose Detector Loaded via:', p);
         return;
       }
