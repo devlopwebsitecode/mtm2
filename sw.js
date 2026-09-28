@@ -1,12 +1,11 @@
-﻿const CACHE_NAME = 'mtm2-cache-v1-0-0';
+const CACHE_NAME = 'mtm2-cache-v1-1-0';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/app.js',
-  '/biomechanics-worker.js',
-  '/manifest.json',
-  '/icon.svg',
-  '/icon.ico'
+  './',
+  './index.html',
+  './app.js',
+  './manifest.json',
+  './icon.svg',
+  './icon.ico'
 ];
 
 self.addEventListener('install', (e) => {
