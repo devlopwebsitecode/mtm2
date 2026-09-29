@@ -2185,6 +2185,41 @@ function initUIEvents() {
     }
   });
 
+  // Camera Switch
+  document.getElementById('btnCamSwitch')?.addEventListener('click', async () => {
+    currentCamera = currentCamera === 'environment' ? 'user' : 'environment';
+    await setupCamera();
+  });
+
+  // Report Modal
+  const reportModal = document.getElementById('modalReport');
+  const openReport = () => {
+    renderReportTables();
+    reportModal?.classList.add('active');
+  };
+  document.getElementById('btnExportReport')?.addEventListener('click', openReport);
+  document.getElementById('btnOpenReportModal')?.addEventListener('click', openReport);
+  document.getElementById('btnCloseReportModal')?.addEventListener('click', () => reportModal?.classList.remove('active'));
+
+  // Clicking avatar container in Report opens profile to snap/upload photo
+  document.getElementById('rptAvatarContainer')?.addEventListener('click', () => {
+    reportModal?.classList.remove('active');
+    document.getElementById('btnAthleteProfile')?.click();
+  });
+
+  // Quick Athlete Edit from Quad 4
+  document.getElementById('btnQuickEditAthlete')?.addEventListener('click', () => {
+    document.getElementById('btnAthleteProfile')?.click();
+  });
+
+  // PDF & Excel Downloads
+  document.getElementById('btnDownloadPdf')?.addEventListener('click', exportPdfReport);
+  document.getElementById('btnDownloadPdfQuick')?.addEventListener('click', exportPdfReport);
+  document.getElementById('btnDownloadExcel')?.addEventListener('click', exportExcelReport);
+  document.getElementById('btnDownloadExcelQuick')?.addEventListener('click', exportExcelReport);
+  document.getElementById('btnSaveArchiveToFolder')?.addEventListener('click', saveAthleteArchiveToDevice);
+}
+
 // ==========================================================================
 // MEDIA CONTROLLERS: Video & Photo Playback, Frame-by-Frame, Slow-Mo & Snapshots
 // ==========================================================================
@@ -2481,41 +2516,6 @@ function initMediaControllers() {
       alert('خطا در ذخیره تصویر آنالیز: ' + err.message);
     }
   });
-}
-
-  // Camera Switch
-  document.getElementById('btnCamSwitch')?.addEventListener('click', async () => {
-    currentCamera = currentCamera === 'environment' ? 'user' : 'environment';
-    await setupCamera();
-  });
-
-  // Report Modal
-  const reportModal = document.getElementById('modalReport');
-  const openReport = () => {
-    renderReportTables();
-    reportModal?.classList.add('active');
-  };
-  document.getElementById('btnExportReport')?.addEventListener('click', openReport);
-  document.getElementById('btnOpenReportModal')?.addEventListener('click', openReport);
-  document.getElementById('btnCloseReportModal')?.addEventListener('click', () => reportModal?.classList.remove('active'));
-
-  // Clicking avatar container in Report opens profile to snap/upload photo
-  document.getElementById('rptAvatarContainer')?.addEventListener('click', () => {
-    reportModal?.classList.remove('active');
-    document.getElementById('btnAthleteProfile')?.click();
-  });
-
-  // Quick Athlete Edit from Quad 4
-  document.getElementById('btnQuickEditAthlete')?.addEventListener('click', () => {
-    document.getElementById('btnAthleteProfile')?.click();
-  });
-
-  // PDF & Excel Downloads
-  document.getElementById('btnDownloadPdf')?.addEventListener('click', exportPdfReport);
-  document.getElementById('btnDownloadPdfQuick')?.addEventListener('click', exportPdfReport);
-  document.getElementById('btnDownloadExcel')?.addEventListener('click', exportExcelReport);
-  document.getElementById('btnDownloadExcelQuick')?.addEventListener('click', exportExcelReport);
-  document.getElementById('btnSaveArchiveToFolder')?.addEventListener('click', saveAthleteArchiveToDevice);
 }
 
 
