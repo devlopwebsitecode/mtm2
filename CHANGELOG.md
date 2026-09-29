@@ -2,6 +2,57 @@
 
 All notable changes to the **MTM2 (Motion Tracker & Handball Talent Studio)** project will be documented in this file.
 
+## [v1.6.0] - 2026-09-29
+
+### 🕸️ Spider / Radar Chart (نمودار عنکبوتی شایستگی‌های حرکتی و بدنی)
+- **Interactive Multi-Axis Biomechanical Radar**: Added an 8-axis high-resolution spider chart (`canvas#canvasReportRadar`) to the official talent report and PDF export.
+- Evaluates:
+  1. قد و قامت (Stature)
+  2. شاخص دست و بالاتنه (Ape Index & Arm Span)
+  3. انفجار پایین‌تنه (Vertical & Long Jump)
+  4. شتاب و چابکی (Sprint Velocity)
+  5. استقامت عضلانی (Plank & Push-ups)
+  6. ثبات مفصلی و تعادل (Squat & Lunge Alignment)
+  7. توده عضلانی (LBM & Body Composition)
+  8. آنتروپومتری دست (Hand Span & Throwing Lever)
+- Concentric polygon guidance grids, emerald/cyan gradient polygon fills, and percentage labels.
+
+### 👤 Comprehensive Athlete Profile & Instant Photo Capture
+- **New Demographic & Sporting Biometrics**:
+  - National ID Code (کد ملی), Birth Date (تاریخ تولد), Gender (جنسیت پسر / دختر).
+  - Contact Details: Mobile Phone (شماره موبایل), Email (ایمیل).
+  - Training Context: School/Academy (مدرسه / آکادمی), City/Province (شهر / استان), Coach Name (نام مربی).
+  - Lateral Dominance: Dominant Throwing Hand (دست برتر), Dominant Foot (پای برتر), Dominant Eye (چشم برتر).
+- **Instant Webcam Snapshot (`📸 عکس فوری از وب‌کم`)**: One-click frame grab directly from live camera feed into the athlete's profile with instant crop and preview.
+- **Photo File Upload (`📁 بارگذاری عکس`)**: Support for PNG, JPG, WEBP photo upload with local storage persistence and report embedding.
+
+### 🏆 Multi-Athlete Management & Switcher
+- **Multi-Player Database**: Add unlimited athletes via top navigation bar or profile modal.
+- **Instant Athlete Switcher**: Dropdown in top header (`#selTopAthlete`) and modal (`#selAthleteModal`).
+- Switching athlete dynamically swaps active profile, biometrics, field test records, test histories, and official report in real time.
+
+### 🎯 AI Multi-Sport Talent Recommendation (اولویت‌بندی رشته‌های ورزشی)
+- **Scientific Biomechanical Profiling Engine**: Evaluates ape index, hand span, stature, lower-body explosive power, and sprint velocity to rank suitable sports with percentage suitability and detailed coaching rationale:
+  - **هندبال (Handball)**: Ape Index > 1.02, Hand Span > 21cm, Stature > 180cm, Sprint & Jump power.
+  - **بسکتبال (Basketball)**: Extreme stature and wingspan leverage, vertical jumping competency.
+  - **والیبال (Volleyball)**: High vertical jump, shoulder mobility, arm swing radius.
+  - **دو و میدانی - سرعت و پرش‌ها (Track & Field)**: High horizontal sprint velocity and standing long jump.
+  - **شنا (Swimming)**: High trunk-to-leg ratio (Cormic index), long torso, broad shoulder biacromial diameter.
+- Displayed in live profile card, athlete modal, official talent report, and Excel/CSV exports.
+
+### 📂 Test History Archive & Local Device Storage
+- **Coach Verification & Archive Workflow (`💾 تایید مربی و بایگانی آزمون فعلی`)**:
+  - Coach inspection modal (`#modalHistory`) with historical timeline cards.
+  - Retains test timestamp, coach notes, snapshot thumbnail, all 10 anthro scores, and 8 field test kinematic metrics.
+  - One-click historical session reload (`👁️ بازبینی سوابق`) to inspect or re-export past tests.
+- **Custom Local Device Storage Path**:
+  - Integrated File System Access API (`window.showDirectoryPicker()`) allowing coaches to select their preferred local device directory (e.g. `D:\MTM2_Archive\`).
+  - Automatically structures folders per athlete (`/نام_کدملی/`) and writes full athlete profiles, PDF/HTML reports, CSV data, and session JSON files directly to local storage.
+  - Automatic download fallback for mobile and restricted browsers.
+
+### 🎥 Media File Picker Fix
+- Converted video/photo upload trigger to native `<label for="mediaFileInput">`, guaranteeing instant, reliable file browser opening on all browsers and operating systems without synthetic event interception.
+
 ## [v1.4.0] - 2026-09-29
 
 ### 🪟 Advanced Studio Window Manager & Bug Fixes

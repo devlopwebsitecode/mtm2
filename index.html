@@ -723,14 +723,22 @@
       </div>
 
       <div class="nav-actions">
-        <button type="button" id="btnAthleteProfile" class="btn-header" title="مشخصات ورزشکار">
-          <span>👤</span>
-          <span id="hdrAthleteName">علی رضایی</span>
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <select id="selTopAthlete" class="ctrl-select" style="font-weight: bold; color: #38bdf8; max-width: 130px;" title="انتخاب بازیکن">
+            <!-- Dynamic athlete list -->
+          </select>
+          <button type="button" id="btnTopAddAthlete" class="btn-header" style="padding: 2px 7px; font-size: 11px;" title="افزودن بازیکن جدید">➕</button>
+        </div>
+        <button type="button" id="btnAthleteProfile" class="btn-header" title="مشخصات و پرونده ورزشکار">
+          <span>👤 پرونده</span>
+        </button>
+        <button type="button" id="btnTestHistory" class="btn-header" title="بایگانی و تاریخچه جلسات تست">
+          <span>📜 بایگانی</span>
         </button>
         <button type="button" id="btnCamSwitch" class="btn-header" title="تغییر دوربین">📷</button>
-        <button type="button" id="btnUploadMedia" class="btn-header" title="بارگذاری ویدیو یا عکس برای آنالیز">
+        <label for="mediaFileInput" id="lblUploadMedia" class="btn-header" style="cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="بارگذاری ویدیو یا عکس برای آنالیز">
           <span>📁 ویدیو / عکس</span>
-        </button>
+        </label>
         <input type="file" id="mediaFileInput" accept="video/*,image/*" style="display: none;">
         <button type="button" id="btnExportReport" class="btn-header primary" title="صدور کارنامه">📑 کارنامه</button>
       </div>
@@ -1154,10 +1162,16 @@
       <!-- QUAD 4: Athlete Hub & Official Report Export (Bottom-Left in RTL) -->
       <section class="quad-cell" id="quadAthleteReport">
         <div class="quad-header">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span>👤 مشخصات ورزشکار & کارنامه استعدادیابی</span>
-            <button type="button" id="btnQuickEditAthlete" class="btn-header" style="padding: 2px 7px; font-size: 10px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span>👤 مشخصات و کارنامه ورزشکار</span>
+            <button type="button" id="btnQuickEditAthlete" class="btn-header" style="padding: 2px 6px; font-size: 10px;">
               ✏️ ویرایش
+            </button>
+            <button type="button" id="btnQuickArchiveSession" class="btn-header" style="padding: 2px 6px; font-size: 10px; background: rgba(16, 185, 129, 0.2); border-color: #10b981; color: #6ee7b7;" title="تایید مربی و بایگانی تست فعلی">
+              💾 بایگانی
+            </button>
+            <button type="button" id="btnQuickHistory" class="btn-header" style="padding: 2px 6px; font-size: 10px;" title="مشاهده سوابق و مقایسه">
+              📜 سوابق
             </button>
           </div>
           <div class="quad-ctrls">
@@ -1168,30 +1182,38 @@
           </div>
         </div>
         <div class="quad-body">
-          <!-- Athlete Quick Info Card -->
-          <div style="background: rgba(30, 41, 59, 0.6); border: 1px solid #334155; border-radius: 8px; padding: 8px; margin-bottom: 8px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-              <span style="font-size: 13px; font-weight: bold; color: #38bdf8;" id="cardAthleteName">علی رضایی</span>
-              <span style="font-size: 11px; background: rgba(56, 189, 248, 0.2); color: #7dd3fc; padding: 2px 6px; border-radius: 4px;" id="cardAthletePosition">بغل راست</span>
+          <!-- Athlete Quick Info Card with Avatar -->
+          <div style="background: rgba(30, 41, 59, 0.6); border: 1px solid #334155; border-radius: 8px; padding: 8px; margin-bottom: 8px; display: flex; gap: 8px; align-items: center;">
+            <div style="width: 48px; height: 48px; border-radius: 50%; overflow: hidden; border: 1.5px solid #38bdf8; background: #0f172a; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
+              <img id="cardAthletePhoto" src="icon.svg" alt="عکس" style="width: 100%; height: 100%; object-fit: cover;">
             </div>
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; font-size: 10.5px; color: #cbd5e1; text-align: center;">
-              <div>سن: <strong id="cardAthleteAge">۱۶</strong></div>
-              <div>وزن: <strong id="cardAthleteWeight">۶۸kg</strong></div>
-              <div>قد: <strong id="cardAthleteHeight">۱۷۸cm</strong></div>
-              <div>دست: <strong id="cardAthleteHand">راست</strong></div>
+            <div style="flex: 1;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span style="font-size: 13px; font-weight: bold; color: #38bdf8;" id="cardAthleteName">علی رضایی</span>
+                <span style="font-size: 10.5px; background: rgba(56, 189, 248, 0.2); color: #7dd3fc; padding: 2px 6px; border-radius: 4px;" id="cardAthletePosition">بغل راست</span>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; font-size: 10px; color: #cbd5e1; text-align: center;">
+                <div>سن: <strong id="cardAthleteAge">۱۶</strong></div>
+                <div>وزن: <strong id="cardAthleteWeight">۶۸kg</strong></div>
+                <div>قد: <strong id="cardAthleteHeight">۱۷۸cm</strong></div>
+                <div>دست: <strong id="cardAthleteHand">راست</strong></div>
+              </div>
             </div>
           </div>
 
-          <!-- Talent Coaching Recommendation -->
-          <div style="background: rgba(2, 132, 199, 0.12); border-right: 3px solid #0284c7; border-radius: 4px; padding: 6px 8px; font-size: 11px; color: #e2e8f0; line-height: 1.6; margin-bottom: 8px;">
-            <strong>توصیه استعدادیابی هندبال:</strong>
+          <!-- Talent Coaching Recommendation & Sport Priority -->
+          <div style="background: rgba(2, 132, 199, 0.12); border-right: 3px solid #0284c7; border-radius: 4px; padding: 6px 8px; font-size: 10.5px; color: #e2e8f0; line-height: 1.5; margin-bottom: 8px;">
+            <strong>توصیه استعدادیابی:</strong>
             <span id="quickCoachingText">گستره بازو و اهرم پرتاب متناسب با پست بغل. شایستگی در دست‌گیری توپ سایز ۲ تأیید شده است.</span>
+            <div id="quickSportRecText" style="margin-top: 4px; font-size: 10px; color: #38bdf8; line-height: 1.4;">
+              رشته‌های مستعد: <strong>۱. هندبال (۹۶٪)</strong> • ۲. بسکتبال (۸۹٪) • ۳. والیبال (۸۵٪)
+            </div>
           </div>
 
           <!-- Report Export Actions -->
           <div style="display: flex; flex-direction: column; gap: 6px;">
             <button type="button" id="btnOpenReportModal" class="btn-act" style="background: linear-gradient(135deg, #0284c7, #0369a1);">
-              <span>📑 مشاهده و چاپ کارنامه رسمی استعدادیابی</span>
+              <span>📑 مشاهده و چاپ کارنامه رسمی استعدادیابی (شامل نمودار عنکبوتی)</span>
             </button>
             <div style="display: flex; gap: 6px;">
               <button type="button" id="btnDownloadPdfQuick" class="btn-act" style="background: #dc2626; border-color: #ef4444; font-size: 11px;">
@@ -1237,17 +1259,116 @@
 
   <!-- Athlete Profile Modal -->
   <div id="modalAthlete" class="modal-overlay">
-    <div class="modal-card">
+    <div class="modal-card" style="max-width: 650px; max-height: 90vh; overflow-y: auto;">
       <div class="modal-header">
-        <div class="modal-title">👤 مشخصات و پارامترهای بیومتریک بازیکن</div>
+        <div class="modal-title">👤 پرونده جامع و پارامترهای بیومتریک بازیکن</div>
         <button type="button" id="btnCloseAthleteModal" class="ctrl-btn" style="color: #f87171;">✕</button>
       </div>
 
+      <!-- Athlete Selection & Actions Bar -->
+      <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(15, 23, 42, 0.85); border: 1px solid #334155; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; gap: 8px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="font-size: 11px; color: #94a3b8;">انتخاب ورزشکار:</span>
+          <select id="selAthleteModal" class="ctrl-select" style="min-width: 150px; font-weight: bold; color: #38bdf8;">
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <button type="button" id="btnModalAddAthlete" class="btn-ctrl-action" title="افزودن بازیکن جدید به سامانه">
+            <span>➕ بازیکن جدید</span>
+          </button>
+          <button type="button" id="btnModalDeleteAthlete" class="btn-ctrl-action" style="color: #f87171; border-color: rgba(239, 68, 68, 0.4);" title="حذف بازیکن جاری">
+            <span>🗑️ حذف</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Profile Photo & Quick Bio -->
+      <div style="display: flex; gap: 14px; align-items: center; background: rgba(30, 41, 59, 0.4); border: 1px solid #334155; border-radius: 10px; padding: 10px; margin-bottom: 12px;">
+        <div style="position: relative; width: 76px; height: 76px; border-radius: 50%; border: 2px solid #38bdf8; overflow: hidden; background: #0f172a; flex-shrink: 0; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);">
+          <img id="imgAthleteAvatarPreview" src="icon.svg" alt="عکس بازیکن" style="width: 100%; height: 100%; object-fit: cover;">
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+          <div style="font-size: 11px; color: #94a3b8; font-weight: bold;">تصویر پروفایل بازیکن:</div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <button type="button" id="btnCapturePhotoWebcam" class="btn-ctrl-action" style="font-size: 10.5px; padding: 4px 8px; background: rgba(14, 165, 233, 0.2); border-color: #38bdf8; color: #7dd3fc;" title="عکس فوری از دوربین استودیو">
+              <span>📸 عکس فوری از وب‌کم</span>
+            </button>
+            <label for="inputAthletePhotoUpload" class="btn-ctrl-action" style="font-size: 10.5px; padding: 4px 8px; cursor: pointer;">
+              <span>📁 بارگذاری عکس</span>
+            </label>
+            <input type="file" id="inputAthletePhotoUpload" accept="image/*" style="display: none;">
+            <button type="button" id="btnRemovePhoto" class="btn-ctrl-action" style="font-size: 10px; color: #94a3b8; padding: 2px 6px;">
+              <span>حذف عکس</span>
+            </button>
+          </div>
+          <div style="font-size: 9.5px; color: #64748b;">این تصویر در بالای کارنامه رسمی و شناسنامه ورزشکار درج می‌گردد.</div>
+        </div>
+      </div>
+
+      <!-- Form Grid 1: Personal & Identification -->
+      <h4 style="color: #38bdf8; font-size: 11.5px; margin-bottom: 6px; border-bottom: 1px solid #1e293b; padding-bottom: 3px;">📋 مشخصات فردی و هویتی</h4>
       <div class="form-grid">
         <div class="form-group">
           <label>نام و نام خانوادگی:</label>
           <input type="text" id="inputAthleteName" value="علی رضایی">
         </div>
+        <div class="form-group">
+          <label>کد ملی:</label>
+          <input type="text" id="inputAthleteNationalCode" value="0012345678" placeholder="۱۰ رقم">
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>تاریخ تولد (روز/ماه/سال):</label>
+          <input type="text" id="inputAthleteBirthDate" value="1388/05/14" placeholder="مثال: 1388/05/14">
+        </div>
+        <div class="form-group">
+          <label>جنسیت:</label>
+          <select id="inputAthleteGender">
+            <option value="پسر">پسر (Male)</option>
+            <option value="دختر">دختر (Female)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>شماره موبایل:</label>
+          <input type="tel" id="inputAthletePhone" value="09123456789" placeholder="09xxxxxxxxx">
+        </div>
+        <div class="form-group">
+          <label>ایمیل:</label>
+          <input type="email" id="inputAthleteEmail" value="ali.rezaei@example.com" placeholder="name@domain.com">
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>نام مدرسه / آکادمی ورزشی:</label>
+          <input type="text" id="inputAthleteSchool" value="دبیرستان استعدادهای درخشان شهید بهشتی">
+        </div>
+        <div class="form-group">
+          <label>شهر و استان:</label>
+          <input type="text" id="inputAthleteCity" value="تهران">
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>نام مربی ارزیاب:</label>
+          <input type="text" id="inputAthleteCoach" value="استاد مرادی">
+        </div>
+        <div class="form-group">
+          <label>رشته ورزشی فعلی:</label>
+          <input type="text" id="inputAthleteSport" value="هندبال (نوجوانان)">
+        </div>
+      </div>
+
+      <!-- Form Grid 2: Sport Specialization & Dominance -->
+      <h4 style="color: #38bdf8; font-size: 11.5px; margin-top: 10px; margin-bottom: 6px; border-bottom: 1px solid #1e293b; padding-bottom: 3px;">🤾‍♂️ ویژگی‌های تخصصی حرکتی و اندام‌های برتر</h4>
+      <div class="form-grid">
         <div class="form-group">
           <label>پست تخصصی هندبال:</label>
           <select id="inputAthletePosition">
@@ -1258,8 +1379,35 @@
             <option value="دروازه‌بان">دروازه‌بان (Goalkeeper)</option>
           </select>
         </div>
+        <div class="form-group">
+          <label>دست برتر شوت‌زن:</label>
+          <select id="inputAthleteHand">
+            <option value="راست">دست راست (Right)</option>
+            <option value="چپ">دست چپ (Left - چپ‌دست)</option>
+          </select>
+        </div>
       </div>
 
+      <div class="form-grid">
+        <div class="form-group">
+          <label>پای برتر (تیک‌آف / پرش):</label>
+          <select id="inputAthleteFoot">
+            <option value="راست">پای راست (Right Foot)</option>
+            <option value="چپ">پای چپ (Left Foot)</option>
+            <option value="هردو">هر دو پا (Ambidextrous)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>چشم برتر (Dominant Eye):</label>
+          <select id="inputAthleteEye">
+            <option value="راست">چشم راست (Right Eye)</option>
+            <option value="چپ">چشم چپ (Left Eye - چپ‌چشم)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Form Grid 3: Basic Biometrics & Khamis Prediction -->
+      <h4 style="color: #38bdf8; font-size: 11.5px; margin-top: 10px; margin-bottom: 6px; border-bottom: 1px solid #1e293b; padding-bottom: 3px;">📏 ابعاد بیومتریک و پیش‌بینی ژنتیکی قد</h4>
       <div class="form-grid">
         <div class="form-group">
           <label>سن تقویمی (سال):</label>
@@ -1277,34 +1425,46 @@
           <input type="number" id="inputAthleteHeight" value="178">
         </div>
         <div class="form-group">
-          <label>دست برتر شوت‌زن:</label>
-          <select id="inputAthleteHand">
-            <option value="راست">دست راست (Right)</option>
-            <option value="چپ">دست چپ (Left - چپ‌دست)</option>
-          </select>
+          <label>قد پدر (cm - فرمول Khamis):</label>
+          <input type="number" id="inputFatherHeight" value="182">
         </div>
       </div>
 
-      <div class="form-grid">
-        <div class="form-group">
-          <label>قد پدر (cm - پیش‌بینی Khamis):</label>
-          <input type="number" id="inputFatherHeight" value="182">
+      <div class="form-group">
+        <label>قد مادر (cm):</label>
+        <input type="number" id="inputMotherHeight" value="167">
+      </div>
+
+      <!-- Sport Talent Recommendations Preview in Profile -->
+      <h4 style="color: #10b981; font-size: 11.5px; margin-top: 12px; margin-bottom: 6px; border-bottom: 1px solid #1e293b; padding-bottom: 3px;">🏆 تحلیل اولویت رشته‌های ورزشی مستعد (هوش مصنوعی بیومکانیک)</h4>
+      <div id="boxSportRecommendationsModal" style="background: rgba(15, 23, 42, 0.7); border: 1px solid #1e293b; border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px;">
+        <!-- Dynamic Recommendation Badges -->
+      </div>
+
+      <!-- Storage Path Selection & Action Buttons -->
+      <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid #475569; border-radius: 8px; padding: 10px; margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px;">
+          <span style="color: #94a3b8;">پوشه ذخیره‌سازی دستگاه:</span>
+          <button type="button" id="btnPickStorageFolder" class="btn-ctrl-action" style="font-size: 10.5px; padding: 3px 8px;">
+            <span>📂 انتخاب مسیر در حافظه دستگاه</span>
+          </button>
         </div>
-        <div class="form-group">
-          <label>قد مادر (cm):</label>
-          <input type="number" id="inputMotherHeight" value="167">
+        <div id="lblCurrentStoragePath" style="font-family: monospace; font-size: 10px; color: #38bdf8; background: #0f172a; padding: 4px 8px; border-radius: 4px; word-break: break-all;">
+          مسیر ذخیره: دانلود مستقیم در پوشه Downloads / آرشیو حافظه محلی مرورگر
         </div>
       </div>
 
       <div class="btn-row" style="margin-top: 14px;">
-        <button type="button" id="btnSaveAthleteProfile" class="btn-act">ذخیره و اعمال در پرونده</button>
+        <button type="button" id="btnSaveAthleteProfile" class="btn-act" style="background: linear-gradient(135deg, #0284c7, #0369a1);">
+          💾 ذخیره و اعمال تغییرات پرونده
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- Export Report Modal (PDF & Excel) -->
+  <!-- Export Report Modal (PDF & Excel with Spider/Radar Chart) -->
   <div id="modalReport" class="modal-overlay">
-    <div class="modal-card" style="max-width: 680px;">
+    <div class="modal-card" style="max-width: 780px; max-height: 92vh; overflow-y: auto;">
       <div class="modal-header">
         <div class="modal-title">📑 صدور کارنامه جامع استعدادیابی و خروجی اکسل</div>
         <button type="button" id="btnCloseReportModal" class="ctrl-btn" style="color: #f87171;">✕</button>
@@ -1312,23 +1472,53 @@
 
       <!-- Printable Area -->
       <div id="printArea" style="background: #fff; color: #0f172a; padding: 14px; border-radius: 8px; font-size: 11px;">
+        <!-- Header with Avatar, Title, Date, ID -->
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0284c7; padding-bottom: 8px; margin-bottom: 10px;">
-          <div>
-            <h2 style="font-size: 15px; color: #0284c7;">کارنامه رسمی استعدادیابی و آزمون‌های میدانی هندبال</h2>
-            <div style="font-size: 10px; color: #64748b;">سامانه حرکت‌سنج ۲ (MTM2) • استانداردهای ISAK و فدراسیون جهانی هندبال (IHF)</div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 58px; height: 58px; border-radius: 50%; overflow: hidden; border: 2px solid #0284c7; background: #f1f5f9; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 0 6px rgba(0,0,0,0.15);">
+              <img id="rptAthleteAvatar" src="icon.svg" alt="عکس بازیکن" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+            <div>
+              <h2 style="font-size: 15px; color: #0284c7; margin-bottom: 2px;">کارنامه رسمی استعدادیابی و آزمون‌های میدانی هندبال</h2>
+              <div style="font-size: 10px; color: #64748b;">سامانه حرکت‌سنج ۲ (MTM2) • استانداردهای ISAK و فدراسیون جهانی هندبال (IHF)</div>
+            </div>
           </div>
           <div style="text-align: left; font-size: 10px; color: #64748b;">
             <div id="rptDateDisplay">تاریخ ارزیابی: ۱۴۰۵/۰۷/۰۶</div>
-            <div>شناسه ورزشکار: MTM2-8841</div>
+            <div>شناسه ورزشکار: <strong id="rptAthleteId">MTM2-8841</strong></div>
           </div>
         </div>
 
-        <!-- Athlete Specs Grid -->
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; margin-bottom: 10px;">
+        <!-- Comprehensive Athlete Bio Grid -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; margin-bottom: 10px; font-size: 10px;">
           <div>نام: <strong id="rptName">علی رضایی</strong></div>
+          <div>کد ملی: <strong id="rptNationalCode">0012345678</strong></div>
+          <div>تولد / سن: <strong id="rptBirthAge">۱۳۸۸/۰۵/۱۴ (۱۶ سال)</strong></div>
+          <div>جنسیت: <strong id="rptGender">پسر</strong></div>
           <div>پست: <strong id="rptPosition">بغل راست</strong></div>
-          <div>سن / وزن: <strong id="rptAgeWeight">۱۶ سال / ۶۸ kg</strong></div>
           <div>دست برتر: <strong id="rptHand">راست</strong></div>
+          <div>پای برتر: <strong id="rptFoot">راست</strong></div>
+          <div>چشم برتر: <strong id="rptEye">راست</strong></div>
+          <div>قد / وزن: <strong id="rptHeightWeight">۱۷۸cm / ۶۸kg</strong></div>
+          <div>مربی: <strong id="rptCoach">استاد مرادی</strong></div>
+          <div>مدرسه: <strong id="rptSchool">شهید بهشتی</strong></div>
+          <div>شهر: <strong id="rptCity">تهران</strong></div>
+        </div>
+
+        <!-- Section: Spider / Radar Chart & Sport Priority Recommendations -->
+        <div style="display: grid; grid-template-columns: 1.1fr 1fr; gap: 10px; margin-bottom: 10px; align-items: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px;">
+          <!-- Radar Chart Canvas -->
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            <h4 style="color: #0369a1; font-size: 11px; margin-bottom: 4px; font-weight: bold;">📊 نمودار عنکبوتی شایستگی‌های پیکرسنجی و حرکتی</h4>
+            <canvas id="canvasReportRadar" width="340" height="250" style="width: 100%; max-width: 340px; height: auto;"></canvas>
+          </div>
+          <!-- Sport Recommendations Priority List -->
+          <div>
+            <h4 style="color: #0369a1; font-size: 11px; margin-bottom: 6px; font-weight: bold;">🏆 اولویت‌بندی رشته‌های ورزشی مستعد (بر اساس شاخص‌های بیومکانیک)</h4>
+            <div id="rptSportRecommendationsList" style="display: flex; flex-direction: column; gap: 5px; font-size: 9.5px;">
+              <!-- Dynamic recommendations rendered here -->
+            </div>
+          </div>
         </div>
 
         <!-- 10 Anthro Indicators Table -->
@@ -1347,7 +1537,7 @@
           </tbody>
         </table>
 
-        <!-- 5 Field Kinematic Tests Table -->
+        <!-- 8 Field Kinematic Tests Table -->
         <h4 style="color: #0369a1; margin-bottom: 4px; font-size: 12px;">۲. آزمون‌های کینماتیک و آمادگی میدانی</h4>
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 10px;">
           <thead>
@@ -1363,13 +1553,19 @@
           </tbody>
         </table>
 
+        <!-- Coaching Recommendation & Signature Block -->
         <div style="background: #eff6ff; border-right: 4px solid #0284c7; padding: 6px 8px; border-radius: 4px; margin-bottom: 8px; font-size: 10.5px; line-height: 1.5;">
           <strong>توصیه تخصصی مربیگری:</strong>
           <span id="rptRecommendationText">تناسب طول اهرم پرتاب و گستره دست با سایز ۲ هندبال بسیار مطلوب است. شتاب ۵ متر عالی و ثبات زانو در دامنه اسکات کامل ارزیابی گردید.</span>
         </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; padding-top: 10px; font-size: 10px; color: #475569; border-top: 1px dashed #cbd5e1;">
+          <div>محل امضا و تایید مربی ارزیاب: _____________________</div>
+          <div>محل مهر هیات / آکادمی هندبال: _____________________</div>
+        </div>
       </div>
 
-      <div class="btn-row" style="margin-top: 12px;">
+      <div class="btn-row" style="margin-top: 12px; gap: 8px; flex-wrap: wrap;">
         <button type="button" id="btnDownloadPdf" class="btn-act" style="background: #dc2626; border-color: #ef4444;">
           <span>📄</span>
           <span>دانلود کارنامه رسمی (PDF)</span>
@@ -1378,6 +1574,37 @@
           <span>📊</span>
           <span>دانلود جدول اکسل (Excel / CSV)</span>
         </button>
+        <button type="button" id="btnSaveArchiveToFolder" class="btn-act" style="background: #0284c7; border-color: #38bdf8;">
+          <span>💾</span>
+          <span>ذخیره در حافظه دستگاه</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Test Sessions Archive & History Modal -->
+  <div id="modalHistory" class="modal-overlay">
+    <div class="modal-card" style="max-width: 740px; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header">
+        <div class="modal-title">📜 بایگانی جلسات آزمون و تاریخچه تست‌های ورزشکاران</div>
+        <button type="button" id="btnCloseHistoryModal" class="ctrl-btn" style="color: #f87171;">✕</button>
+      </div>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(15, 23, 42, 0.8); border: 1px solid #334155; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; gap: 8px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="font-size: 11px; color: #94a3b8;">فیلتر بر اساس ورزشکار:</span>
+          <select id="selHistoryAthleteFilter" class="ctrl-select" style="min-width: 150px; font-weight: bold; color: #38bdf8;">
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+        <button type="button" id="btnSaveCurrentSessionArchive" class="btn-act" style="font-size: 11px; padding: 4px 10px; background: #10b981; border-color: #34d399;">
+          <span>💾 تایید مربی و بایگانی آزمون فعلی</span>
+        </button>
+      </div>
+
+      <!-- History Table / Session Cards Container -->
+      <div id="historySessionsList" style="display: flex; flex-direction: column; gap: 8px;">
+        <!-- Dynamic historical sessions rendered here -->
       </div>
     </div>
   </div>

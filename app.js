@@ -27,16 +27,35 @@ let showSkeleton = true;
 let showAngles = true;
 let showDimensions = true;
 
-// Athlete Profile State
+// Athlete Profile State & Multi-Athlete Database
+let athletesDB = [];
+let currentAthleteId = 'ath_1';
+let currentStorageDirHandle = null;
+
 let athlete = {
+  id: 'ath_1',
   name: 'علی رضایی',
+  nationalCode: '0012345678',
+  birthDate: '1388/05/14',
+  gender: 'پسر',
+  phone: '09123456789',
+  email: 'ali.rezaei@example.com',
+  school: 'دبیرستان استعدادهای درخشان شهید بهشتی',
+  city: 'تهران',
+  coach: 'استاد مرادی',
+  sport: 'هندبال (نوجوانان)',
   position: 'بغل',
+  dominantHand: 'راست',
+  dominantFoot: 'راست',
+  dominantEye: 'راست',
+  hand: 'راست',
   age: 16,
   weight: 68,
   height: 178,
-  hand: 'راست',
   fatherHeight: 182,
-  motherHeight: 167
+  motherHeight: 167,
+  photoUrl: '',
+  testSessions: []
 };
 
 // 10 Anthro Indicators State
@@ -119,6 +138,8 @@ window.addEventListener('DOMContentLoaded', () => {
   loadVisualSettingsFromStorage();
   initUIEvents();
   initWindowManager();
+  initAthleteManager();
+  initHistoryArchive();
   initMobileTabs();
   initVisualToggles();
   initMediaControllers();
@@ -131,37 +152,313 @@ window.addEventListener('DOMContentLoaded', () => {
   loadPoseModel().catch(err => console.warn('Pose model load warning:', err));
 });
 
-// Load / Save Athlete Profile
+// Load / Save Athlete Profile & Multi-Athlete Database
 function loadAthleteFromStorage() {
-  const saved = localStorage.getItem('mtm2_athlete');
-  if (saved) {
-    try {
-      athlete = Object.assign(athlete, JSON.parse(saved));
-      anthroData.height = athlete.height;
-    } catch(e) {}
+  try {
+    const savedList = localStorage.getItem('mtm2_athletes_v2');
+    if (savedList) {
+      athletesDB = JSON.parse(savedList);
+    }
+  } catch(e) {}
+
+  if (!athletesDB || !Array.isArray(athletesDB) || athletesDB.length === 0) {
+    const oldSaved = localStorage.getItem('mtm2_athlete');
+    let base = Object.assign({}, athlete);
+    if (oldSaved) {
+      try { base = Object.assign(base, JSON.parse(oldSaved)); } catch(e) {}
+    }
+    base.id = 'ath_default_1';
+    base.anthroData = JSON.parse(JSON.stringify(anthroData));
+    base.testsData = JSON.parse(JSON.stringify(testsData));
+    base.testSessions = [];
+    athletesDB = [base];
   }
+
+  const activeId = localStorage.getItem('mtm2_active_athlete_id');
+  const found = athletesDB.find(a => a.id === activeId);
+  athlete = found || athletesDB[0];
+  currentAthleteId = athlete.id;
+
+  if (athlete.anthroData) anthroData = Object.assign(anthroData, athlete.anthroData);
+  if (athlete.testsData) testsData = Object.assign(testsData, athlete.testsData);
+  if (!athlete.testSessions) athlete.testSessions = [];
+
   updateAthleteUI();
+  updateAthleteDropdowns();
 }
 
 function saveAthleteToStorage() {
+  if (!athlete.id) athlete.id = 'ath_' + Date.now();
+  athlete.anthroData = JSON.parse(JSON.stringify(anthroData));
+  athlete.testsData = JSON.parse(JSON.stringify(testsData));
+
+  const idx = athletesDB.findIndex(a => a.id === athlete.id);
+  if (idx >= 0) {
+    athletesDB[idx] = JSON.parse(JSON.stringify(athlete));
+  } else {
+    athletesDB.push(JSON.parse(JSON.stringify(athlete)));
+  }
+
+  localStorage.setItem('mtm2_athletes_v2', JSON.stringify(athletesDB));
+  localStorage.setItem('mtm2_active_athlete_id', athlete.id);
   localStorage.setItem('mtm2_athlete', JSON.stringify(athlete));
+
   updateAthleteUI();
+  updateAthleteDropdowns();
+}
+
+function updateAthleteDropdowns() {
+  const topSel = document.getElementById('selTopAthlete');
+  const modalSel = document.getElementById('selAthleteModal');
+  const histSel = document.getElementById('selHistoryAthleteFilter');
+
+  const optionsHtml = athletesDB.map(a => 
+    `<option value="${a.id}" ${a.id === athlete.id ? 'selected' : ''}>${a.name} (${a.position || 'ورزشکار'})</option>`
+  ).join('');
+
+  if (topSel) topSel.innerHTML = optionsHtml;
+  if (modalSel) modalSel.innerHTML = optionsHtml;
+  if (histSel) histSel.innerHTML = optionsHtml;
+}
+
+function switchAthlete(newId) {
+  const target = athletesDB.find(a => a.id === newId);
+  if (!target) return;
+
+  saveAthleteToStorage();
+
+  athlete = target;
+  currentAthleteId = athlete.id;
+  localStorage.setItem('mtm2_active_athlete_id', athlete.id);
+
+  if (athlete.anthroData) anthroData = Object.assign(anthroData, athlete.anthroData);
+  if (athlete.testsData) testsData = Object.assign(testsData, athlete.testsData);
+  if (!athlete.testSessions) athlete.testSessions = [];
+
+  updateAthleteUI();
+  updateAnthroPanelUI();
+  updateAthleteDropdowns();
+  populateAthleteModalInputs();
+  if (typeof renderHistorySessions === 'function') renderHistorySessions();
 }
 
 function updateAthleteUI() {
   const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
   setTxt('hdrAthleteName', athlete.name);
   setTxt('cardAthleteName', athlete.name);
-  setTxt('cardAthletePosition', athlete.position);
-  setTxt('cardAthleteAge', athlete.age);
-  setTxt('cardAthleteWeight', athlete.weight + ' kg');
-  setTxt('cardAthleteHeight', athlete.height + ' cm');
-  setTxt('cardAthleteHand', athlete.hand === 'left' ? 'چپ' : 'راست');
-  setTxt('rptName', athlete.name);
-  setTxt('rptPosition', athlete.position);
-  setTxt('rptAgeWeight', `${athlete.age} سال / ${athlete.weight} kg`);
-  setTxt('rptHand', athlete.hand === 'left' ? 'چپ' : 'راست');
-  setTxt('btnCalibHeightVal', athlete.height);
+  setTxt('cardAthletePosition', athlete.position || 'بغل');
+  setTxt('cardAthleteAge', athlete.age || 16);
+  setTxt('cardAthleteWeight', (athlete.weight || 68) + ' kg');
+  setTxt('cardAthleteHeight', (athlete.height || 178) + ' cm');
+  setTxt('cardAthleteHand', athlete.dominantHand || (athlete.hand === 'left' ? 'چپ' : 'راست'));
+  setTxt('btnCalibHeightVal', athlete.height || 178);
+
+  const avatarSrc = athlete.photoUrl || 'icon.svg';
+  const imgCard = document.getElementById('cardAthletePhoto');
+  if (imgCard) imgCard.src = avatarSrc;
+  const imgPreview = document.getElementById('imgAthleteAvatarPreview');
+  if (imgPreview) imgPreview.src = avatarSrc;
+  const imgRpt = document.getElementById('rptAthleteAvatar');
+  if (imgRpt) imgRpt.src = avatarSrc;
+
+  // Recommendations preview in Quad 4
+  const recs = calculateSportRecommendations(athlete, anthroData, testsData);
+  const recTextEl = document.getElementById('quickSportRecText');
+  if (recTextEl && recs && recs.length >= 3) {
+    recTextEl.innerHTML = `رشته‌های مستعد: <strong style="color: #38bdf8;">۱. ${recs[0].sport} (${recs[0].score}٪)</strong> • ۲. ${recs[1].sport} (${recs[1].score}٪) • ۳. ${recs[2].sport} (${recs[2].score}٪)`;
+  }
+}
+
+// Sport Talent Recommendation Engine
+function calculateSportRecommendations(ath, anthro, tests) {
+  const height = Number(anthro.height) || Number(ath.height) || 178;
+  const wingspan = Number(anthro.wingspan) || 184;
+  const apeDiff = Number(anthro.spanMinusHeight) || (wingspan - height);
+  const armLever = Number(anthro.armLever) || 74;
+  const jumpHeight = Number(tests.jump.maxHeight) || 35;
+  const longJump = Number(tests.longJump.bestDist || tests.longJump.distanceCm) || 180;
+  const run5m = Number(tests.run5m.time) || 1.45;
+  const plank = Number(tests.plank.timeSec) || 45;
+  const pushup = Number(tests.pushup.reps) || 15;
+
+  let hbScore = 82;
+  if (height >= 176) hbScore += 5;
+  if (apeDiff >= 4) hbScore += 5;
+  if (armLever >= 72) hbScore += 4;
+  if (run5m > 0 && run5m <= 1.4) hbScore += 4;
+  if (ath.dominantHand === 'چپ' || ath.hand === 'left' || ath.hand === 'چپ') hbScore += 3;
+  hbScore = Math.min(98, Math.max(70, hbScore));
+
+  let bbScore = 75;
+  if (height >= 180) bbScore += 9;
+  if (apeDiff >= 5) bbScore += 8;
+  if (jumpHeight >= 40) bbScore += 5;
+  bbScore = Math.min(97, Math.max(68, bbScore));
+
+  let vbScore = 74;
+  if (jumpHeight >= 38 || longJump >= 200) vbScore += 10;
+  if (height >= 178) vbScore += 7;
+  if (apeDiff >= 3) vbScore += 4;
+  vbScore = Math.min(96, Math.max(65, vbScore));
+
+  let athScore = 72;
+  if (run5m > 0 && run5m <= 1.35) athScore += 10;
+  if (longJump >= 210) athScore += 10;
+  if (plank >= 60) athScore += 4;
+  athScore = Math.min(95, Math.max(65, athScore));
+
+  let swimScore = 70;
+  if (apeDiff >= 5) swimScore += 11;
+  if (anthro.cormicIndex >= 52) swimScore += 6;
+  if (pushup >= 20) swimScore += 5;
+  swimScore = Math.min(94, Math.max(60, swimScore));
+
+  const list = [
+    {
+      sport: 'هندبال تخصصی (Handball)',
+      score: hbScore,
+      bestPosition: (ath.dominantHand === 'چپ' || ath.hand === 'left') ? 'بغل راست / گوش راست (طلایی چپ‌دست)' : (height >= 184 ? 'بغل / خط‌زن دفاعی' : 'بغل شوت‌زن / بازی‌ساز'),
+      reasons: `اهرم پرتاب (${armLever}cm)، شاخص میمونی (${apeDiff >= 0 ? '+' : ''}${apeDiff}cm)، تناسب دست با توپ هندبال`,
+      badgeColor: '#0284c7'
+    },
+    {
+      sport: 'بسکتبال (Basketball)',
+      score: bbScore,
+      bestPosition: height >= 182 ? 'فوروارد قدرتی' : 'پوینت گارد / شوتینگ گارد',
+      reasons: `گستره کشیده بازوها (${wingspan}cm فراتر از قد) و چابکی گام‌برداری`,
+      badgeColor: '#ea580c'
+    },
+    {
+      sport: 'والیبال (Volleyball)',
+      score: vbScore,
+      bestPosition: 'اسپکر قدرتی / پشت خط‌زن',
+      reasons: `توان انفجاری پرش (${jumpHeight}cm) و فریم کمربند شانه`,
+      badgeColor: '#16a34a'
+    },
+    {
+      sport: 'دو و میدانی - پرش و سرعت (Athletics)',
+      score: athScore,
+      bestPosition: 'پرش طول درجا / دو سرعت ۶۰ و ۱۰۰ متر',
+      reasons: `شتاب انفجاری استارت ۵ متر (${run5m}s) و رکورد پرش طول`,
+      badgeColor: '#7c3aed'
+    },
+    {
+      sport: 'شنای مسافت و سرعتی (Swimming)',
+      score: swimScore,
+      bestPosition: 'کرال سینه / شنای پروانه',
+      reasons: `گستره دست بالا و شاخص میمونی مثبت برای پیش‌رانش هیدرودینامیک`,
+      badgeColor: '#0891b2'
+    }
+  ];
+
+  list.sort((a, b) => b.score - a.score);
+  return list;
+}
+
+// Draw Spider / Radar Chart on Canvas
+function drawRadarChart(canvas, ath, anthro, tests) {
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const width = 340;
+  const height = 250;
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  ctx.clearRect(0, 0, width, height);
+
+  const cx = width / 2;
+  const cy = height / 2 + 5;
+  const radius = 80;
+
+  const metrics = [
+    { label: 'قد و استخوان‌بندی', val: Math.min(100, Math.max(30, (anthro.height / 190) * 100)) },
+    { label: 'گستره بازوها', val: Math.min(100, Math.max(30, (anthro.wingspan / 195) * 100)) },
+    { label: 'اهرم پرتاب', val: Math.min(100, Math.max(30, (anthro.armLever / 80) * 100)) },
+    { label: 'توان پرش', val: Math.min(100, Math.max(30, ((tests.jump.maxHeight || 30) / 55) * 100)) },
+    { label: 'شتاب ۵ متر', val: Math.min(100, Math.max(30, tests.run5m.time > 0 ? (1.7 / tests.run5m.time) * 80 : 78)) },
+    { label: 'استقامت تنه', val: Math.min(100, Math.max(30, ((tests.plank.timeSec || 30) / 90) * 100)) },
+    { label: 'استقامت شانه', val: Math.min(100, Math.max(30, ((tests.pushup.reps || 10) / 30) * 100)) },
+    { label: 'ثبات کینماتیک', val: 88 }
+  ];
+
+  const totalAxes = metrics.length;
+  const angleStep = (Math.PI * 2) / totalAxes;
+
+  // 1. Draw 5 concentric polygon rings
+  const levels = [0.2, 0.4, 0.6, 0.8, 1.0];
+  levels.forEach(lvl => {
+    ctx.beginPath();
+    for (let i = 0; i < totalAxes; i++) {
+      const angle = i * angleStep - Math.PI / 2;
+      const x = cx + Math.cos(angle) * (radius * lvl);
+      const y = cy + Math.sin(angle) * (radius * lvl);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = lvl === 1.0 ? '#cbd5e1' : '#e2e8f0';
+    ctx.lineWidth = lvl === 1.0 ? 1.5 : 1;
+    ctx.stroke();
+  });
+
+  // 2. Draw radial spokes
+  for (let i = 0; i < totalAxes; i++) {
+    const angle = i * angleStep - Math.PI / 2;
+    const x = cx + Math.cos(angle) * radius;
+    const y = cy + Math.sin(angle) * radius;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(x, y);
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // 3. Draw athlete data polygon
+  ctx.beginPath();
+  for (let i = 0; i < totalAxes; i++) {
+    const angle = i * angleStep - Math.PI / 2;
+    const r = (metrics[i].val / 100) * radius;
+    const x = cx + Math.cos(angle) * r;
+    const y = cy + Math.sin(angle) * r;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(2, 132, 199, 0.35)';
+  ctx.fill();
+  ctx.strokeStyle = '#0284c7';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  // 4. Draw node dots & labels
+  ctx.font = 'bold 8.5px Tahoma, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  for (let i = 0; i < totalAxes; i++) {
+    const angle = i * angleStep - Math.PI / 2;
+    const r = (metrics[i].val / 100) * radius;
+    const x = cx + Math.cos(angle) * r;
+    const y = cy + Math.sin(angle) * r;
+
+    // Dot
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#38bdf8';
+    ctx.fill();
+    ctx.strokeStyle = '#0369a1';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Text Label outside
+    const lx = cx + Math.cos(angle) * (radius + 18);
+    const ly = cy + Math.sin(angle) * (radius + 18);
+    ctx.fillStyle = '#1e293b';
+    ctx.fillText(`${metrics[i].label} (${Math.round(metrics[i].val)}%)`, lx, ly);
+  }
 }
 
 let starterDismissed = false;
@@ -2029,34 +2326,6 @@ function initMediaControllers() {
     await setupCamera();
   });
 
-  // Athlete Modal
-  const athleteModal = document.getElementById('modalAthlete');
-  document.getElementById('btnAthleteProfile')?.addEventListener('click', () => {
-    document.getElementById('inputAthleteName').value = athlete.name;
-    document.getElementById('inputAthletePosition').value = athlete.position;
-    document.getElementById('inputAthleteAge').value = athlete.age;
-    document.getElementById('inputAthleteWeight').value = athlete.weight;
-    document.getElementById('inputAthleteHeight').value = athlete.height;
-    document.getElementById('inputAthleteHand').value = athlete.hand;
-    document.getElementById('inputFatherHeight').value = athlete.fatherHeight;
-    document.getElementById('inputMotherHeight').value = athlete.motherHeight;
-    athleteModal.classList.add('active');
-  });
-  document.getElementById('btnCloseAthleteModal')?.addEventListener('click', () => athleteModal.classList.remove('active'));
-  document.getElementById('btnSaveAthleteProfile')?.addEventListener('click', () => {
-    athlete.name = document.getElementById('inputAthleteName').value;
-    athlete.position = document.getElementById('inputAthletePosition').value;
-    athlete.age = Number(document.getElementById('inputAthleteAge').value);
-    athlete.weight = Number(document.getElementById('inputAthleteWeight').value);
-    athlete.height = Number(document.getElementById('inputAthleteHeight').value);
-    anthroData.height = athlete.height;
-    athlete.hand = document.getElementById('inputAthleteHand').value;
-    athlete.fatherHeight = Number(document.getElementById('inputFatherHeight').value);
-    athlete.motherHeight = Number(document.getElementById('inputMotherHeight').value);
-    saveAthleteToStorage();
-    athleteModal.classList.remove('active');
-  });
-
   // Report Modal
   const reportModal = document.getElementById('modalReport');
   const openReport = () => {
@@ -2077,7 +2346,9 @@ function initMediaControllers() {
   document.getElementById('btnDownloadPdfQuick')?.addEventListener('click', exportPdfReport);
   document.getElementById('btnDownloadExcel')?.addEventListener('click', exportExcelReport);
   document.getElementById('btnDownloadExcelQuick')?.addEventListener('click', exportExcelReport);
+  document.getElementById('btnSaveArchiveToFolder')?.addEventListener('click', saveAthleteArchiveToDevice);
 }
+
 
 // ==========================================================================
 // WINDOW MANAGER: Resizing Splitters, Minimize, Maximize, Close, PiP & Multi-Monitor Popouts
@@ -2498,8 +2769,50 @@ function initMobileTabs() {
 }
 
 
-// Render Report Dynamic Tables
+// Render Report Dynamic Tables, Radar Chart & Sport Priority
 function renderReportTables() {
+  const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val !== undefined ? val : ''; };
+  setTxt('rptName', athlete.name);
+  setTxt('rptNationalCode', athlete.nationalCode || '---');
+  setTxt('rptBirthAge', `${athlete.birthDate || '---'} (${athlete.age || 16} سال)`);
+  setTxt('rptGender', athlete.gender || 'پسر');
+  setTxt('rptPosition', athlete.position || 'بغل');
+  setTxt('rptHand', athlete.dominantHand || (athlete.hand === 'left' ? 'چپ' : 'راست'));
+  setTxt('rptFoot', athlete.dominantFoot || 'راست');
+  setTxt('rptEye', athlete.dominantEye || 'راست');
+  setTxt('rptHeightWeight', `${anthroData.height}cm / ${athlete.weight || 68}kg`);
+  setTxt('rptCoach', athlete.coach || 'استاد مرادی');
+  setTxt('rptSchool', athlete.school || 'شهید بهشتی');
+  setTxt('rptCity', athlete.city || 'تهران');
+  setTxt('rptAthleteId', athlete.id ? `MTM2-${athlete.id.slice(-4)}` : 'MTM2-8841');
+  setTxt('rptDateDisplay', `تاریخ ارزیابی: ${new Date().toLocaleDateString('fa-IR')}`);
+
+  const avatarSrc = athlete.photoUrl || 'icon.svg';
+  const rptAvatar = document.getElementById('rptAthleteAvatar');
+  if (rptAvatar) rptAvatar.src = avatarSrc;
+
+  // 1. Draw Spider / Radar Chart
+  const radarCanvas = document.getElementById('canvasReportRadar');
+  if (radarCanvas) {
+    drawRadarChart(radarCanvas, athlete, anthroData, testsData);
+  }
+
+  // 2. Render Sport Recommendations List in Report
+  const recs = calculateSportRecommendations(athlete, anthroData, testsData);
+  const rptRecsEl = document.getElementById('rptSportRecommendationsList');
+  if (rptRecsEl) {
+    rptRecsEl.innerHTML = recs.map((r, idx) => `
+      <div style="background: #fff; border: 1px solid #e2e8f0; border-right: 3px solid ${r.badgeColor}; border-radius: 4px; padding: 4px 6px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-weight: bold; color: ${r.badgeColor};">رتبه ${idx + 1}: ${r.sport}</span>
+          <strong style="color: #0284c7;">${r.score}٪ تطابق</strong>
+        </div>
+        <div style="color: #64748b; font-size: 9px; margin-top: 2px;">پست بهینه: <strong>${r.bestPosition}</strong> • ${r.reasons}</div>
+      </div>
+    `).join('');
+  }
+
+  // 3. Render 10 Anthro Indicators Table
   const anthroRows = [
     { name: '۱. قد ایستاده (Stature)', val: `${anthroData.height} cm`, analysis: 'مناسب پست بغل و دفاع میانی', badge: 'عالی' },
     { name: '۲. ارتفاع نشسته (کورمیک)', val: `${anthroData.sittingHeight} cm (${anthroData.cormicIndex}%)`, analysis: 'پاهای کشیده مناسب گام‌برداری سریع', badge: 'ممتاز' },
@@ -2525,6 +2838,7 @@ function renderReportTables() {
     `).join('');
   }
 
+  // 4. Render 8 Kinematic Field Tests Table
   const testRows = [
     { name: 'دوی ۵ متر شتاب هندبال', record: `${testsData.run5m.time.toFixed(2)}s`, metric: `سرعت: ${testsData.run5m.speed} m/s`, rating: 'شتاب انفجاری عالی' },
     { name: 'پرش متوالی ارگوجامپ بوسکو', record: `${testsData.jump.reps} پرش (${testsData.jump.maxHeight}cm)`, metric: `توان: ${testsData.jump.power} W/kg`, rating: 'پتانسیل پرش ممتاز' },
@@ -2563,7 +2877,7 @@ async function exportPdfReport() {
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
     pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`کارنامه_استعدادیابی_هندبال_${athlete.name.replace(/\s+/g, '_')}.pdf`);
+    pdf.save(`کارنامه_استعدادیابی_${athlete.name.replace(/\s+/g, '_')}_${athlete.nationalCode || 'MTM2'}.pdf`);
   } catch (err) {
     console.error('PDF export error:', err);
     window.print();
@@ -2573,10 +2887,18 @@ async function exportPdfReport() {
 // Excel / CSV Export Function
 function exportExcelReport() {
   const bom = '\uFEFF';
-  let csv = bom + 'بخش,شاخص یا نام آزمون,مقدار / رکورد,تحلیل و استاندارد هندبال,رتبه استعدادیابی\r\n';
+  let csv = bom + 'بخش,شاخص یا مشخصه,مقدار / رکورد,تحلیل و استاندارد هندبال,رتبه استعدادیابی\r\n';
 
-  csv += `مشخصات,نام ورزشکار,${athlete.name},پست: ${athlete.position},سن: ${athlete.age}\r\n`;
-  csv += `مشخصات,دست برتر,${athlete.hand},وزن: ${athlete.weight}kg,قد: ${athlete.height}cm\r\n`;
+  csv += `هویتی,نام و نام خانوادگی,${athlete.name},پست: ${athlete.position},سن: ${athlete.age}\r\n`;
+  csv += `هویتی,کد ملی,${athlete.nationalCode || '---'},تاریخ تولد: ${athlete.birthDate || '---'},جنسیت: ${athlete.gender || 'پسر'}\r\n`;
+  csv += `هویتی,شماره تماس,${athlete.phone || '---'},ایمیل: ${athlete.email || '---'},مربی: ${athlete.coach || '---'}\r\n`;
+  csv += `هویتی,مدرسه و شهر,${athlete.school || '---'} - ${athlete.city || '---'},رشته ورزشی: ${athlete.sport || 'هندبال'},دست برتر: ${athlete.dominantHand || 'راست'}\r\n`;
+  csv += `هویتی,پای برتر و چشم برتر,پا: ${athlete.dominantFoot || 'راست'} / چشم: ${athlete.dominantEye || 'راست'},وزن: ${athlete.weight}kg,قد: ${anthroData.height}cm\r\n`;
+
+  const recs = calculateSportRecommendations(athlete, anthroData, testsData);
+  recs.forEach((r, idx) => {
+    csv += `پیشنهاد هوش مصنوعی,اولویت ${idx + 1} رشته ورزشی,${r.sport},تطابق: ${r.score}%,${r.bestPosition} - ${r.reasons}\r\n`;
+  });
 
   csv += `پیکرسنجی,۱. قد ایستاده,${anthroData.height} cm,استاندارد هندبال,عالی\r\n`;
   csv += `پیکرسنجی,۲. ارتفاع نشسته,${anthroData.sittingHeight} cm,کورمیک ${anthroData.cormicIndex}%,ممتاز\r\n`;
@@ -2602,11 +2924,430 @@ function exportExcelReport() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `گزارش_استعدادیابی_هندبال_${athlete.name.replace(/\s+/g, '_')}.csv`;
+  a.download = `پرونده_استعدادیابی_${athlete.name.replace(/\s+/g, '_')}_${athlete.nationalCode || 'MTM2'}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+// Populate Athlete Profile Modal Fields
+function populateAthleteModalInputs() {
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val !== undefined ? val : ''; };
+  setVal('inputAthleteName', athlete.name);
+  setVal('inputAthleteNationalCode', athlete.nationalCode || '');
+  setVal('inputAthleteBirthDate', athlete.birthDate || '');
+  setVal('inputAthleteGender', athlete.gender || 'پسر');
+  setVal('inputAthletePhone', athlete.phone || '');
+  setVal('inputAthleteEmail', athlete.email || '');
+  setVal('inputAthleteSchool', athlete.school || '');
+  setVal('inputAthleteCity', athlete.city || '');
+  setVal('inputAthleteCoach', athlete.coach || '');
+  setVal('inputAthleteSport', athlete.sport || 'هندبال');
+  setVal('inputAthletePosition', athlete.position || 'بغل');
+  setVal('inputAthleteHand', athlete.dominantHand || (athlete.hand === 'left' ? 'چپ' : 'راست'));
+  setVal('inputAthleteFoot', athlete.dominantFoot || 'راست');
+  setVal('inputAthleteEye', athlete.dominantEye || 'راست');
+  setVal('inputAthleteAge', athlete.age || 16);
+  setVal('inputAthleteWeight', athlete.weight || 68);
+  setVal('inputAthleteHeight', athlete.height || 178);
+  setVal('inputFatherHeight', athlete.fatherHeight || 182);
+  setVal('inputMotherHeight', athlete.motherHeight || 167);
+
+  const imgPrev = document.getElementById('imgAthleteAvatarPreview');
+  if (imgPrev) imgPrev.src = athlete.photoUrl || 'icon.svg';
+
+  const recs = calculateSportRecommendations(athlete, anthroData, testsData);
+  const boxRec = document.getElementById('boxSportRecommendationsModal');
+  if (boxRec) {
+    boxRec.innerHTML = recs.map((r, idx) => `
+      <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid #334155; border-radius: 6px; padding: 6px 10px; display: flex; align-items: center; justify-content: space-between; font-size: 11px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="background: ${r.badgeColor}; color: #fff; padding: 2px 7px; border-radius: 4px; font-weight: bold; font-size: 10px;">رتبه ${idx + 1}</span>
+          <strong style="color: #f8fafc;">${r.sport}</strong>
+          <span style="color: #94a3b8; font-size: 10px;">(پست برتر: ${r.bestPosition})</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="color: #94a3b8; font-size: 9.5px;">${r.reasons}</span>
+          <span style="font-weight: bold; color: #38bdf8; font-size: 12px;">${r.score}٪</span>
+        </div>
+      </div>
+    `).join('');
+  }
+}
+
+// Instant Webcam Avatar Capture
+function captureWebcamPhoto() {
+  try {
+    const snapCanvas = document.createElement('canvas');
+    snapCanvas.width = 240;
+    snapCanvas.height = 240;
+    const sCtx = snapCanvas.getContext('2d');
+
+    const src = (videoEl && videoEl.videoWidth > 0) ? videoEl : ((imageEl && imageEl.src) ? imageEl : canvasEl);
+    if (!src) {
+      alert('تصویر یا دوربینی در حال حاضر فعال نیست.');
+      return;
+    }
+
+    const sw = src.videoWidth || src.naturalWidth || src.width;
+    const sh = src.videoHeight || src.naturalHeight || src.height;
+    const minDim = Math.min(sw, sh);
+    const sx = (sw - minDim) / 2;
+    const sy = (sh - minDim) / 2;
+
+    sCtx.drawImage(src, sx, sy, minDim, minDim, 0, 0, 240, 240);
+    const dataUrl = snapCanvas.toDataURL('image/jpeg', 0.9);
+    athlete.photoUrl = dataUrl;
+    saveAthleteToStorage();
+
+    const imgPrev = document.getElementById('imgAthleteAvatarPreview');
+    if (imgPrev) imgPrev.src = dataUrl;
+    const imgCard = document.getElementById('cardAthletePhoto');
+    if (imgCard) imgCard.src = dataUrl;
+    const imgRpt = document.getElementById('rptAthleteAvatar');
+    if (imgRpt) imgRpt.src = dataUrl;
+
+    alert('✅ عکس چهره ورزشکار با موفقیت از تصویر جاری ضبط و در پرونده ثبت شد.');
+  } catch(err) {
+    alert('خطا در عکس‌برداری از وب‌کم: ' + err.message);
+  }
+}
+
+// Athlete Profile Manager Controller
+function initAthleteManager() {
+  const athleteModal = document.getElementById('modalAthlete');
+
+  const openAthleteModal = () => {
+    populateAthleteModalInputs();
+    athleteModal?.classList.add('active');
+  };
+  document.getElementById('btnAthleteProfile')?.addEventListener('click', openAthleteModal);
+  document.getElementById('btnQuickEditAthlete')?.addEventListener('click', openAthleteModal);
+  document.getElementById('btnCloseAthleteModal')?.addEventListener('click', () => athleteModal?.classList.remove('active'));
+
+  document.getElementById('btnSaveAthleteProfile')?.addEventListener('click', () => {
+    const getVal = (id, def) => { const el = document.getElementById(id); return el ? el.value.trim() : def; };
+    athlete.name = getVal('inputAthleteName', 'ورزشکار');
+    athlete.nationalCode = getVal('inputAthleteNationalCode', '');
+    athlete.birthDate = getVal('inputAthleteBirthDate', '');
+    athlete.gender = getVal('inputAthleteGender', 'پسر');
+    athlete.phone = getVal('inputAthletePhone', '');
+    athlete.email = getVal('inputAthleteEmail', '');
+    athlete.school = getVal('inputAthleteSchool', '');
+    athlete.city = getVal('inputAthleteCity', '');
+    athlete.coach = getVal('inputAthleteCoach', '');
+    athlete.sport = getVal('inputAthleteSport', 'هندبال');
+    athlete.position = getVal('inputAthletePosition', 'بغل');
+    athlete.dominantHand = getVal('inputAthleteHand', 'راست');
+    athlete.hand = athlete.dominantHand === 'چپ' ? 'left' : 'right';
+    athlete.dominantFoot = getVal('inputAthleteFoot', 'راست');
+    athlete.dominantEye = getVal('inputAthleteEye', 'راست');
+    athlete.age = Number(getVal('inputAthleteAge', 16));
+    athlete.weight = Number(getVal('inputAthleteWeight', 68));
+    athlete.height = Number(getVal('inputAthleteHeight', 178));
+    anthroData.height = athlete.height;
+    athlete.fatherHeight = Number(getVal('inputFatherHeight', 182));
+    athlete.motherHeight = Number(getVal('inputMotherHeight', 167));
+
+    saveAthleteToStorage();
+    athleteModal?.classList.remove('active');
+    alert(`✅ پرونده بیومتریک ${athlete.name} با موفقیت ذخیره و به‌روزرسانی شد.`);
+  });
+
+  // Switch Athlete Listeners
+  document.getElementById('selTopAthlete')?.addEventListener('change', (e) => switchAthlete(e.target.value));
+  document.getElementById('selAthleteModal')?.addEventListener('change', (e) => switchAthlete(e.target.value));
+
+  // Add New Athlete
+  const addNew = () => {
+    const newName = prompt('لطفاً نام و نام خانوادگی ورزشکار جدید را وارد نمایید:', 'ورزشکار جدید');
+    if (!newName || !newName.trim()) return;
+
+    const newId = 'ath_' + Date.now();
+    const newAthlete = {
+      id: newId,
+      name: newName.trim(),
+      nationalCode: '',
+      birthDate: '',
+      gender: 'پسر',
+      phone: '',
+      email: '',
+      school: '',
+      city: 'تهران',
+      coach: athlete.coach || 'استاد مرادی',
+      sport: 'هندبال',
+      position: 'بغل',
+      dominantHand: 'راست',
+      dominantFoot: 'راست',
+      dominantEye: 'راست',
+      hand: 'راست',
+      age: 16,
+      weight: 68,
+      height: 178,
+      fatherHeight: 182,
+      motherHeight: 167,
+      photoUrl: '',
+      anthroData: JSON.parse(JSON.stringify(anthroData)),
+      testsData: JSON.parse(JSON.stringify(testsData)),
+      testSessions: []
+    };
+
+    athletesDB.push(newAthlete);
+    switchAthlete(newId);
+    openAthleteModal();
+  };
+  document.getElementById('btnTopAddAthlete')?.addEventListener('click', addNew);
+  document.getElementById('btnModalAddAthlete')?.addEventListener('click', addNew);
+
+  // Delete Current Athlete
+  document.getElementById('btnModalDeleteAthlete')?.addEventListener('click', () => {
+    if (athletesDB.length <= 1) {
+      alert('حداقل یک ورزشکار باید در سامانه ثبت باشد.');
+      return;
+    }
+    if (confirm(`آیا از حذف پرونده "${athlete.name}" اطمینان دارید؟`)) {
+      athletesDB = athletesDB.filter(a => a.id !== athlete.id);
+      switchAthlete(athletesDB[0].id);
+    }
+  });
+
+  // Instant Webcam Photo Capture
+  document.getElementById('btnCapturePhotoWebcam')?.addEventListener('click', () => {
+    captureWebcamPhoto();
+  });
+
+  // Photo File Upload
+  document.getElementById('inputAthletePhotoUpload')?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      athlete.photoUrl = ev.target.result;
+      saveAthleteToStorage();
+      const imgPrev = document.getElementById('imgAthleteAvatarPreview');
+      if (imgPrev) imgPrev.src = athlete.photoUrl;
+      const imgCard = document.getElementById('cardAthletePhoto');
+      if (imgCard) imgCard.src = athlete.photoUrl;
+      const imgRpt = document.getElementById('rptAthleteAvatar');
+      if (imgRpt) imgRpt.src = athlete.photoUrl;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // Remove Photo
+  document.getElementById('btnRemovePhoto')?.addEventListener('click', () => {
+    athlete.photoUrl = '';
+    saveAthleteToStorage();
+    const imgPrev = document.getElementById('imgAthleteAvatarPreview');
+    if (imgPrev) imgPrev.src = 'icon.svg';
+    const imgCard = document.getElementById('cardAthletePhoto');
+    if (imgCard) imgCard.src = 'icon.svg';
+    const imgRpt = document.getElementById('rptAthleteAvatar');
+    if (imgRpt) imgRpt.src = 'icon.svg';
+  });
+
+  // Storage Directory Picker
+  document.getElementById('btnPickStorageFolder')?.addEventListener('click', () => {
+    pickStorageFolder();
+  });
+}
+
+// History & Archive System
+function initHistoryArchive() {
+  const historyModal = document.getElementById('modalHistory');
+
+  const openHistory = () => {
+    renderHistorySessions();
+    historyModal?.classList.add('active');
+  };
+
+  document.getElementById('btnTestHistory')?.addEventListener('click', openHistory);
+  document.getElementById('btnQuickHistory')?.addEventListener('click', openHistory);
+  document.getElementById('btnCloseHistoryModal')?.addEventListener('click', () => historyModal?.classList.remove('active'));
+
+  document.getElementById('selHistoryAthleteFilter')?.addEventListener('change', (e) => {
+    switchAthlete(e.target.value);
+  });
+
+  const archiveCurrent = () => {
+    archiveCurrentTestSession();
+  };
+  document.getElementById('btnSaveCurrentSessionArchive')?.addEventListener('click', archiveCurrent);
+  document.getElementById('btnQuickArchiveSession')?.addEventListener('click', archiveCurrent);
+}
+
+function archiveCurrentTestSession() {
+  try {
+    let snapUrl = '';
+    try {
+      const snapCanvas = document.createElement('canvas');
+      snapCanvas.width = canvasEl.width;
+      snapCanvas.height = canvasEl.height;
+      const sCtx = snapCanvas.getContext('2d');
+      if (currentMediaSource === 'image' && imageEl && imageEl.style.display !== 'none') {
+        sCtx.drawImage(imageEl, 0, 0, snapCanvas.width, snapCanvas.height);
+      } else if (videoEl && videoEl.style.display !== 'none') {
+        sCtx.drawImage(videoEl, 0, 0, snapCanvas.width, snapCanvas.height);
+      }
+      sCtx.drawImage(canvasEl, 0, 0);
+      snapUrl = snapCanvas.toDataURL('image/jpeg', 0.85);
+    } catch(e) {}
+
+    const now = new Date();
+    const session = {
+      id: 'sess_' + Date.now(),
+      dateStr: now.toLocaleDateString('fa-IR'),
+      timeStr: now.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' }),
+      timestamp: Date.now(),
+      athleteId: athlete.id,
+      athleteName: athlete.name,
+      anthro: JSON.parse(JSON.stringify(anthroData)),
+      tests: JSON.parse(JSON.stringify(testsData)),
+      recommendations: calculateSportRecommendations(athlete, anthroData, testsData),
+      snapshot: snapUrl
+    };
+
+    if (!athlete.testSessions) athlete.testSessions = [];
+    athlete.testSessions.unshift(session);
+    saveAthleteToStorage();
+    renderHistorySessions();
+
+    alert(`✅ جلسه ارزیابی مورخ ${session.dateStr} با موفقیت توسط مربی تایید و در بایگانی پرونده ${athlete.name} ذخیره گردید.`);
+  } catch(err) {
+    alert('خطا در بایگانی آزمون: ' + err.message);
+  }
+}
+
+function renderHistorySessions() {
+  const container = document.getElementById('historySessionsList');
+  if (!container) return;
+
+  const sessions = athlete.testSessions || [];
+  if (sessions.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 24px; color: #94a3b8; font-size: 11.5px; background: rgba(30, 41, 59, 0.4); border: 1px dashed #334155; border-radius: 8px;">
+        ℹ️ هنوز هیچ جلسه آزمونی برای <strong>${athlete.name}</strong> بایگانی نشده است.<br>
+        جهت ثبت اولین ارزیابی، روی دکمه "💾 تایید مربی و بایگانی آزمون فعلی" کلیک فرمایید.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = sessions.map((sess, idx) => `
+    <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid #334155; border-radius: 8px; padding: 10px; display: flex; gap: 10px; align-items: center; justify-content: space-between;">
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <div style="width: 60px; height: 45px; border-radius: 6px; overflow: hidden; background: #000; border: 1px solid #475569; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
+          ${sess.snapshot ? `<img src="${sess.snapshot}" alt="فریم" style="width: 100%; height: 100%; object-fit: cover;">` : `<span style="font-size: 16px;">📷</span>`}
+        </div>
+        <div>
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 3px;">
+            <strong style="color: #38bdf8; font-size: 12px;">جلسه ${sessions.length - idx} • ${sess.dateStr} (${sess.timeStr})</strong>
+            <span style="font-size: 9px; background: rgba(34, 197, 94, 0.2); color: #4ade80; padding: 1px 5px; border-radius: 4px; font-weight: bold;">تایید مربی ✓</span>
+          </div>
+          <div style="font-size: 10.5px; color: #cbd5e1; display: flex; gap: 8px; flex-wrap: wrap;">
+            <span>قد: <strong>${sess.anthro.height}cm</strong></span>
+            <span>Wingspan: <strong>${sess.anthro.wingspan}cm</strong></span>
+            <span>پرش: <strong>${sess.tests.jump.maxHeight || 0}cm</strong></span>
+            <span>دوی ۵متر: <strong>${sess.tests.run5m.time ? sess.tests.run5m.time.toFixed(2) + 's' : '--'}</strong></span>
+            <span>پلانک: <strong>${formatTimer(sess.tests.plank.timeSec || 0)}</strong></span>
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; gap: 5px;">
+        <button type="button" class="btn-ctrl-action" onclick="restoreHistoricalSession('${sess.id}')" title="بارگذاری این مقادیر در استودیو">
+          <span>👁️ بازبینی</span>
+        </button>
+        <button type="button" class="btn-ctrl-action" style="color: #f87171;" onclick="deleteHistoricalSession('${sess.id}')" title="حذف این رکورد">
+          <span>✕</span>
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+window.restoreHistoricalSession = function(sessId) {
+  const sess = (athlete.testSessions || []).find(s => s.id === sessId);
+  if (!sess) return;
+  if (confirm(`آیا می‌خواهید رکوردهای جلسه مورخ ${sess.dateStr} در سامانه بارگذاری و بازبینی شوند؟`)) {
+    anthroData = Object.assign(anthroData, sess.anthro);
+    testsData = Object.assign(testsData, sess.tests);
+    updateAnthroPanelUI();
+    document.getElementById('modalHistory')?.classList.remove('active');
+    document.getElementById('btnExportReport')?.click();
+  }
+};
+
+window.deleteHistoricalSession = function(sessId) {
+  if (confirm('آیا از حذف این جلسه ارزیابی از بایگانی اطمینان دارید؟')) {
+    athlete.testSessions = (athlete.testSessions || []).filter(s => s.id !== sessId);
+    saveAthleteToStorage();
+    renderHistorySessions();
+  }
+};
+
+// Device Storage Picker
+async function pickStorageFolder() {
+  if (typeof window.showDirectoryPicker === 'function') {
+    try {
+      currentStorageDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+      const pathLbl = document.getElementById('lblCurrentStoragePath');
+      if (pathLbl) {
+        pathLbl.textContent = `📁 پوشه متصل: ${currentStorageDirHandle.name} (ذخیره‌سازی مستقیم روی هارد)`;
+        pathLbl.style.color = '#4ade80';
+      }
+      alert(`✅ پوشه "${currentStorageDirHandle.name}" به عنوان مسیر ذخیره‌سازی دستگاه انتخاب شد.\nاز این پس پرونده، کارنامه، تصاویر و فایل‌های اکسل در این پوشه آرشیو می‌شوند.`);
+    } catch(err) {
+      if (err.name !== 'AbortError') alert('خطا در انتخاب پوشه: ' + err.message);
+    }
+  } else {
+    alert('مرورگر شما از انتخاب دایرکتوری مستقیم پشتیبانی نمی‌کند؛ فایل‌ها مستقیماً در پوشه Downloads دستگاه بارگیری می‌شوند.');
+  }
+}
+
+// Save Full Archive to Local Hard Drive Folder or Download
+async function saveAthleteArchiveToDevice() {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('fa-IR').replace(/\//g, '-');
+  const safeName = athlete.name.replace(/\s+/g, '_');
+  const folderName = `${safeName}_${athlete.nationalCode || 'archive'}`;
+
+  let csv = '\uFEFFشناسه ورزشکار,نام,کد ملی,تاریخ ارزیابی,شاخص یا آزمون,مقدار\r\n';
+  csv += `${athlete.id},${athlete.name},${athlete.nationalCode || ''},${dateStr},قد ایستاده,${anthroData.height} cm\r\n`;
+  csv += `${athlete.id},${athlete.name},${athlete.nationalCode || ''},${dateStr},گستره بازوها,${anthroData.wingspan} cm\r\n`;
+  csv += `${athlete.id},${athlete.name},${athlete.nationalCode || ''},${dateStr},شاخص میمونی,${anthroData.apeIndex}\r\n`;
+  csv += `${athlete.id},${athlete.name},${athlete.nationalCode || ''},${dateStr},اهرم پرتاب,${anthroData.armLever} cm\r\n`;
+  csv += `${athlete.id},${athlete.name},${athlete.nationalCode || ''},${dateStr},دوی ۵ متر,${testsData.run5m.time.toFixed(2)}s\r\n`;
+  csv += `${athlete.id},${athlete.name},${athlete.nationalCode || ''},${dateStr},پرش عمودی,${testsData.jump.maxHeight} cm\r\n`;
+  csv += `${athlete.id},${athlete.name},${athlete.nationalCode || ''},${dateStr},پرش طول درجا,${testsData.longJump.bestDist || testsData.longJump.distanceCm || 0} cm\r\n`;
+  csv += `${athlete.id},${athlete.name},${athlete.nationalCode || ''},${dateStr},پلانک,${formatTimer(testsData.plank.timeSec)}\r\n`;
+  csv += `${athlete.id},${athlete.name},${athlete.nationalCode || ''},${dateStr},شنا سوئدی,${testsData.pushup.reps}\r\n`;
+  csv += `${athlete.id},${athlete.name},${athlete.nationalCode || ''},${dateStr},اسکات عمیق,${testsData.squat.reps}\r\n`;
+  csv += `${athlete.id},${athlete.name},${athlete.nationalCode || ''},${dateStr},لانژ,${testsData.lunge.reps}\r\n`;
+
+  if (currentStorageDirHandle) {
+    try {
+      const athleteSubDir = await currentStorageDirHandle.getDirectoryHandle(folderName, { create: true });
+
+      const csvFile = await athleteSubDir.getFileHandle(`سوابق_${safeName}_${dateStr}.csv`, { create: true });
+      const csvWritable = await csvFile.createWritable();
+      await csvWritable.write(csv);
+      await csvWritable.close();
+
+      const jsonFile = await athleteSubDir.getFileHandle(`پرونده_${safeName}.json`, { create: true });
+      const jsonWritable = await jsonFile.createWritable();
+      await jsonWritable.write(JSON.stringify(athlete, null, 2));
+      await jsonWritable.close();
+
+      alert(`✅ پرونده کامل، سوابق و اکسل با موفقیت در پوشه ذخیره شد:\n${currentStorageDirHandle.name} / ${folderName}`);
+      return;
+    } catch(err) {
+      console.warn('Direct file write error, fallback to export:', err);
+    }
+  }
+
+  exportExcelReport();
+  exportPdfReport();
 }
 
 // Universal Draggable Panel Logic
