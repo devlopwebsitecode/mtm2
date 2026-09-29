@@ -118,6 +118,7 @@ window.addEventListener('DOMContentLoaded', () => {
   loadAthleteFromStorage();
   loadVisualSettingsFromStorage();
   initUIEvents();
+  initWindowManager();
   initMobileTabs();
   initVisualToggles();
   initMediaControllers();
@@ -2078,7 +2079,396 @@ function initMediaControllers() {
   document.getElementById('btnDownloadExcelQuick')?.addEventListener('click', exportExcelReport);
 }
 
-// Mobile 3-Way Tab Switcher Handler
+// ==========================================================================
+// WINDOW MANAGER: Resizing Splitters, Minimize, Maximize, Close, PiP & Multi-Monitor Popouts
+// ==========================================================================
+const activePopouts = {};
+let pipVideoEl = null;
+
+function initWindowManager() {
+  const studio = document.getElementById('studioQuads');
+  const splitter = document.getElementById('studioCenterSplitter');
+
+  // 1. Draggable Center Splitter (Cross Splitter for Custom Sizing)
+  if (splitter && studio) {
+    let isSplitterDragging = false;
+
+    const onPointerMove = (e) => {
+      if (!isSplitterDragging) return;
+      const rect = studio.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+
+      const colPct = Math.max(15, Math.min(85, ((e.clientX - rect.left) / rect.width) * 100));
+      const rowPct = Math.max(15, Math.min(85, ((e.clientY - rect.top) / rect.height) * 100));
+
+      studio.style.setProperty('--col-split', `${colPct}%`);
+      studio.style.setProperty('--row-split', `${rowPct}%`);
+      resizeCanvas();
+    };
+
+    const onPointerUp = (e) => {
+      if (isSplitterDragging) {
+        isSplitterDragging = false;
+        try { splitter.releasePointerCapture(e.pointerId); } catch(err) {}
+        document.removeEventListener('pointermove', onPointerMove);
+        document.removeEventListener('pointerup', onPointerUp);
+        resizeCanvas();
+      }
+    };
+
+    splitter.addEventListener('pointerdown', (e) => {
+      isSplitterDragging = true;
+      try { splitter.setPointerCapture(e.pointerId); } catch(err) {}
+      document.addEventListener('pointermove', onPointerMove);
+      document.addEventListener('pointerup', onPointerUp);
+      e.preventDefault();
+    });
+
+    // Double-click to instantly reset to 50/50
+    splitter.addEventListener('dblclick', () => {
+      studio.style.setProperty('--col-split', '50%');
+      studio.style.setProperty('--row-split', '50%');
+      resizeCanvas();
+    });
+  }
+
+  // 2. Quad Window Header Controls (Popout, Maximize, Minimize, Close)
+  document.querySelectorAll('.btn-quad-tool').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const targetId = btn.getAttribute('data-target');
+
+      if (btn.classList.contains('max')) {
+        toggleQuadMaximize(targetId);
+      } else if (btn.classList.contains('min')) {
+        toggleQuadMinimize(targetId);
+      } else if (btn.classList.contains('close')) {
+        closeQuad(targetId);
+      } else if (btn.classList.contains('popout')) {
+        openPopoutWindow(targetId);
+      }
+    });
+  });
+
+  // 3. Picture-in-Picture Floating Window
+  document.getElementById('btnPipCamera')?.addEventListener('click', () => {
+    togglePictureInPicture();
+  });
+
+  // 4. Top Navigation Window Manager Toggles
+  document.querySelectorAll('.btn-win-toggle[data-quad]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const quadId = btn.getAttribute('data-quad');
+      const quad = document.getElementById(quadId);
+      if (!quad) return;
+
+      if (quad.classList.contains('quad-closed')) {
+        restoreQuad(quadId);
+      } else if (quad.classList.contains('quad-minimized')) {
+        toggleQuadMinimize(quadId);
+      } else {
+        closeQuad(quadId);
+      }
+    });
+  });
+
+  // 5. Reset 2x2 Layout Button
+  document.getElementById('btnResetLayout')?.addEventListener('click', () => {
+    resetStudioLayout();
+  });
+
+  // 6. Window Resize Handler to Prevent Style Bleed Between Mobile and Desktop
+  window.addEventListener('resize', () => {
+    if (window.innerWidth >= 1024) {
+      ['quadCamera', 'quadAnthro', 'quadTests', 'quadAthleteReport'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && !el.classList.contains('quad-closed')) {
+          el.style.display = '';
+        }
+      });
+    }
+    resizeCanvas();
+  });
+}
+
+function toggleQuadMaximize(quadId) {
+  const quad = document.getElementById(quadId);
+  if (!quad) return;
+
+  const isMax = quad.classList.toggle('quad-maximized');
+  if (isMax) quad.classList.remove('quad-minimized');
+
+  const maxBtn = quad.querySelector('.btn-quad-tool.max');
+  if (maxBtn) {
+    maxBtn.textContent = isMax ? '❐' : '⛶';
+    maxBtn.title = isMax ? 'بازگشت به چیدمان شبکه (❐)' : 'تمام‌صفحه / فوکوس (⛶)';
+  }
+  resizeCanvas();
+}
+
+function toggleQuadMinimize(quadId) {
+  const quad = document.getElementById(quadId);
+  if (!quad) return;
+
+  const isMin = quad.classList.toggle('quad-minimized');
+  if (isMin) quad.classList.remove('quad-maximized');
+
+  const minBtn = quad.querySelector('.btn-quad-tool.min');
+  if (minBtn) {
+    minBtn.textContent = isMin ? '🗖' : '_';
+    minBtn.title = isMin ? 'بزرگ‌کردن مجدد (🗖)' : 'کوچک‌کردن (_)';
+  }
+  resizeCanvas();
+}
+
+function closeQuad(quadId) {
+  const quad = document.getElementById(quadId);
+  if (!quad) return;
+
+  quad.classList.remove('quad-maximized', 'quad-minimized');
+  quad.classList.add('quad-closed');
+
+  const toggleBtn = document.querySelector(`.btn-win-toggle[data-quad="${quadId}"]`);
+  if (toggleBtn) toggleBtn.classList.remove('active');
+
+  rebalanceStudioGrid();
+  resizeCanvas();
+}
+
+function restoreQuad(quadId) {
+  const quad = document.getElementById(quadId);
+  if (!quad) return;
+
+  quad.classList.remove('quad-closed', 'quad-minimized', 'quad-maximized');
+  quad.style.display = '';
+
+  const maxBtn = quad.querySelector('.btn-quad-tool.max');
+  if (maxBtn) { maxBtn.textContent = '⛶'; maxBtn.title = 'تمام‌صفحه / فوکوس (⛶)'; }
+  const minBtn = quad.querySelector('.btn-quad-tool.min');
+  if (minBtn) { minBtn.textContent = '_'; minBtn.title = 'کوچک‌کردن (_)'; }
+
+  const toggleBtn = document.querySelector(`.btn-win-toggle[data-quad="${quadId}"]`);
+  if (toggleBtn) toggleBtn.classList.add('active');
+
+  rebalanceStudioGrid();
+  resizeCanvas();
+}
+
+function rebalanceStudioGrid() {
+  const studio = document.getElementById('studioQuads');
+  const splitter = document.getElementById('studioCenterSplitter');
+  if (!studio) return;
+
+  const quads = ['quadCamera', 'quadAnthro', 'quadTests', 'quadAthleteReport'];
+  const openQuads = quads.filter(id => {
+    const el = document.getElementById(id);
+    return el && !el.classList.contains('quad-closed');
+  });
+
+  if (openQuads.length === 4) {
+    studio.style.gridTemplateColumns = 'var(--col-split, 50%) calc(100% - var(--col-split, 50%) - 10px)';
+    studio.style.gridTemplateRows = 'var(--row-split, 50%) calc(100% - var(--row-split, 50%) - 10px)';
+    if (splitter) splitter.style.display = 'flex';
+  } else if (openQuads.length === 1) {
+    studio.style.gridTemplateColumns = '1fr';
+    studio.style.gridTemplateRows = '1fr';
+    if (splitter) splitter.style.display = 'none';
+  } else if (openQuads.length === 2) {
+    studio.style.gridTemplateColumns = '1fr 1fr';
+    studio.style.gridTemplateRows = '1fr';
+    if (splitter) splitter.style.display = 'none';
+  } else if (openQuads.length === 3) {
+    studio.style.gridTemplateColumns = '1fr 1fr';
+    studio.style.gridTemplateRows = '1fr 1fr';
+    if (splitter) splitter.style.display = 'none';
+  } else if (openQuads.length === 0) {
+    restoreQuad('quadCamera');
+  }
+}
+
+function resetStudioLayout() {
+  const studio = document.getElementById('studioQuads');
+  ['quadCamera', 'quadAnthro', 'quadTests', 'quadAthleteReport'].forEach(id => {
+    const q = document.getElementById(id);
+    if (q) {
+      q.classList.remove('quad-closed', 'quad-minimized', 'quad-maximized');
+      q.style.display = '';
+      const maxBtn = q.querySelector('.btn-quad-tool.max');
+      if (maxBtn) { maxBtn.textContent = '⛶'; maxBtn.title = 'تمام‌صفحه / فوکوس (⛶)'; }
+      const minBtn = q.querySelector('.btn-quad-tool.min');
+      if (minBtn) { minBtn.textContent = '_'; minBtn.title = 'کوچک‌کردن (_)'; }
+    }
+    const toggleBtn = document.querySelector(`.btn-win-toggle[data-quad="${id}"]`);
+    if (toggleBtn) toggleBtn.classList.add('active');
+  });
+
+  if (studio) {
+    studio.style.setProperty('--col-split', '50%');
+    studio.style.setProperty('--row-split', '50%');
+  }
+  rebalanceStudioGrid();
+  resizeCanvas();
+}
+
+async function togglePictureInPicture() {
+  try {
+    if (document.pictureInPictureElement) {
+      await document.exitPictureInPicture();
+      return;
+    }
+
+    if (!pipVideoEl) {
+      pipVideoEl = document.createElement('video');
+      pipVideoEl.muted = true;
+      pipVideoEl.playsInline = true;
+      pipVideoEl.style.position = 'fixed';
+      pipVideoEl.style.width = '1px';
+      pipVideoEl.style.height = '1px';
+      pipVideoEl.style.opacity = '0.001';
+      pipVideoEl.style.pointerEvents = 'none';
+      document.body.appendChild(pipVideoEl);
+    }
+
+    if (canvasEl && typeof canvasEl.captureStream === 'function') {
+      const stream = canvasEl.captureStream(30);
+      pipVideoEl.srcObject = stream;
+      await pipVideoEl.play();
+      await pipVideoEl.requestPictureInPicture();
+    } else if (videoEl && typeof videoEl.requestPictureInPicture === 'function') {
+      await videoEl.requestPictureInPicture();
+    } else {
+      alert('قابلیت تصویر در تصویر (Picture-in-Picture) توسط این مرورگر پشتیبانی نمی‌شود.');
+    }
+  } catch (err) {
+    console.warn('PiP notice:', err);
+    if (videoEl && typeof videoEl.requestPictureInPicture === 'function') {
+      try {
+        await videoEl.requestPictureInPicture();
+      } catch (e2) {
+        alert('امکان فعال‌سازی Picture-in-Picture: ' + (e2.message || err.message));
+      }
+    } else {
+      alert('امکان فعال‌سازی Picture-in-Picture: ' + err.message);
+    }
+  }
+}
+
+function openPopoutWindow(quadId) {
+  const quad = document.getElementById(quadId);
+  if (!quad) return;
+
+  const titleMap = {
+    quadCamera: 'دوربین و هوش مصنوعی بیومکانیک (پروژکتور / مانیتور دوم)',
+    quadAnthro: '۱۰ شاخص پیکرسنجی هندبال (ISAK & IHF)',
+    quadTests: 'آزمون‌های حرکتی و کینماتیک بیومکانیک',
+    quadAthleteReport: 'مشخصات ورزشکار & کارنامه استعدادیابی'
+  };
+  const winTitle = titleMap[quadId] || 'حرکت‌سنج ۲';
+
+  if (activePopouts[quadId] && !activePopouts[quadId].closed) {
+    activePopouts[quadId].focus();
+    return;
+  }
+
+  const pop = window.open('', `MTM2_${quadId}`, 'width=1100,height=750,menubar=no,toolbar=no,location=no,status=no,resizable=yes');
+  if (!pop) {
+    alert('پنجره پاپ‌آپ توسط مرورگر مسدود شد! لطفاً باز شدن پنجره‌های پاپ‌آپ را در نوار آدرس مجاز بفرمایید.');
+    return;
+  }
+  activePopouts[quadId] = pop;
+
+  pop.document.write(`
+    <!DOCTYPE html>
+    <html lang="fa" dir="rtl">
+    <head>
+      <meta charset="UTF-8">
+      <title>${winTitle} • حرکت‌سنج ۲</title>
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Tahoma, Segoe UI, sans-serif; }
+        body { background: #090d16; color: #f8fafc; height: 100vh; display: flex; flex-direction: column; overflow: hidden; padding: 10px; }
+        .pop-hdr { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: rgba(15, 23, 42, 0.95); border: 1px solid #334155; border-radius: 8px; margin-bottom: 8px; }
+        .pop-ttl { font-size: 13px; font-weight: bold; color: #38bdf8; display: flex; align-items: center; gap: 8px; }
+        .pop-btn { background: #0284c7; border: 1px solid #38bdf8; color: #fff; padding: 5px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: bold; transition: all 0.15s; }
+        .pop-btn:hover { background: #0ea5e9; }
+        .pop-box { flex: 1; position: relative; background: #0b1120; border: 1px solid #1e293b; border-radius: 10px; overflow: auto; padding: 12px; display: flex; flex-direction: column; }
+        canvas { width: 100%; height: 100%; object-fit: contain; background: #000; border-radius: 8px; }
+      </style>
+    </head>
+    <body>
+      <div class="pop-hdr">
+        <div class="pop-ttl">🤾‍♂️ ${winTitle}</div>
+        <button class="pop-btn" onclick="document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()">⛶ تمام‌صفحه پروژکتور سالن</button>
+      </div>
+      <div class="pop-box" id="popContentArea"></div>
+    </body>
+    </html>
+  `);
+  pop.document.close();
+
+  const area = pop.document.getElementById('popContentArea');
+
+  if (quadId === 'quadCamera') {
+    const popCanvas = pop.document.createElement('canvas');
+    popCanvas.width = canvasEl.width || 1280;
+    popCanvas.height = canvasEl.height || 720;
+    area.appendChild(popCanvas);
+    const popCtx = popCanvas.getContext('2d');
+
+    let popAnimId = null;
+    const renderPop = () => {
+      if (pop.closed) {
+        cancelAnimationFrame(popAnimId);
+        delete activePopouts[quadId];
+        return;
+      }
+      if (canvasEl && popCanvas) {
+        if (popCanvas.width !== canvasEl.width || popCanvas.height !== canvasEl.height) {
+          popCanvas.width = canvasEl.width;
+          popCanvas.height = canvasEl.height;
+        }
+        popCtx.clearRect(0, 0, popCanvas.width, popCanvas.height);
+        popCtx.drawImage(canvasEl, 0, 0);
+      }
+      popAnimId = pop.requestAnimationFrame(renderPop);
+    };
+    popAnimId = pop.requestAnimationFrame(renderPop);
+  } else {
+    const styleSheets = Array.from(document.styleSheets);
+    styleSheets.forEach(sheet => {
+      try {
+        if (sheet.href) {
+          const l = pop.document.createElement('link');
+          l.rel = 'stylesheet';
+          l.href = sheet.href;
+          pop.document.head.appendChild(l);
+        } else if (sheet.cssRules) {
+          const s = pop.document.createElement('style');
+          Array.from(sheet.cssRules).forEach(r => s.appendChild(pop.document.createTextNode(r.cssText)));
+          pop.document.head.appendChild(s);
+        }
+      } catch(e) {}
+    });
+
+    const bodyContent = quad.querySelector('.quad-body');
+    if (bodyContent) {
+      area.appendChild(bodyContent.cloneNode(true));
+      const syncInterval = setInterval(() => {
+        if (pop.closed) {
+          clearInterval(syncInterval);
+          delete activePopouts[quadId];
+          return;
+        }
+        const currentBody = quad.querySelector('.quad-body');
+        if (currentBody && area) {
+          area.innerHTML = '';
+          area.appendChild(currentBody.cloneNode(true));
+        }
+      }, 500);
+    }
+  }
+}
+
+// Mobile 3-Way Tab Switcher Handler (Fixed: Isolates Mobile and Never Corrupts Desktop Layout)
 function initMobileTabs() {
   const tabBtns = document.querySelectorAll('.mobile-tab-btn');
   tabBtns.forEach(btn => {
@@ -2092,10 +2482,13 @@ function initMobileTabs() {
         if (el) {
           if (id === targetId) {
             el.classList.add('mobile-active');
-            el.style.display = 'flex';
           } else {
             el.classList.remove('mobile-active');
-            el.style.display = 'none';
+          }
+          if (window.innerWidth < 1024) {
+            el.style.display = (id === targetId) ? 'flex' : 'none';
+          } else {
+            el.style.display = '';
           }
         }
       });
@@ -2103,6 +2496,7 @@ function initMobileTabs() {
     });
   });
 }
+
 
 // Render Report Dynamic Tables
 function renderReportTables() {

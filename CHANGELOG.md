@@ -2,6 +2,18 @@
 
 All notable changes to the **MTM2 (Motion Tracker & Handball Talent Studio)** project will be documented in this file.
 
+## [v1.4.0] - 2026-09-29
+
+### 🪟 Advanced Studio Window Manager & Bug Fixes
+- **Resolved Disappearing Window Bug**: Eliminated inline `style.display` modifications from mobile tab switching that corrupted desktop 4-quad layout when clicking "۱۰ شاخص" or "آزمون‌های میدانی".
+- **Interactive Draggable Center Cross Splitter (`✛`)**: Drag the center intersection to smoothly resize column widths and row heights (`--col-split`, `--row-split` from 15% to 85%), with double-click reset to 50/50.
+- **Full Studio Maximize / Focus (`⛶`)**: Expand any individual quadrant to 100% workspace size for deep analysis with instant restore (`❐`).
+- **Header Minimize (`_`)**: Collapse any window down to its header bar (38px) with expand toggle (`🗖`).
+- **Temporary Close (`✕`) & Dynamic Grid Rebalancing**: Hide any unused window; the remaining active windows automatically rebalance across the workspace.
+- **Picture-in-Picture Floating Window (`🗗 PiP`)**: Native Windows floating PiP stream (`canvas.captureStream(30)`) rendering live webcam + skeleton + joint angles, allowing coaches to multitask across other apps.
+- **Multi-Monitor / TV Projector Pop-Out (`↗ Popout`)**: Detach any quad into an independent browser window for dual-monitor setups, gym projectors, or secondary screens with 60 FPS mirrored canvas.
+- **Top Navigation Window Manager**: Quick pinned toggles `[📷 دوربین]`, `[📐 ۱۰ شاخص]`, `[⚡ آزمون‌ها]`, `[👤 کارنامه]` to show/hide any window anytime, plus `[🔄 ریست ۲×۲]` to restore the standard layout.
+
 ## [v1.3.0] - 2026-09-29
 
 ### 🎨 Visual & Biomechanical HUD Overhaul (Aventuz Academy Style)

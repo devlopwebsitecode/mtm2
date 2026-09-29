@@ -109,12 +109,16 @@
       font-weight: bold;
     }
 
-    /* Studio 4-Section Grid for Desktop (A Plus/Cross Grid) */
+    /* Studio 4-Section Grid for Desktop (A Plus/Cross Grid with Resizing & Window Tools) */
+    :root {
+      --col-split: 50%;
+      --row-split: 50%;
+    }
     .studio-quads {
       flex: 1;
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      grid-template-rows: 1fr 1fr;
+      grid-template-columns: var(--col-split, 50%) calc(100% - var(--col-split, 50%) - 10px);
+      grid-template-rows: var(--row-split, 50%) calc(100% - var(--row-split, 50%) - 10px);
       gap: 10px;
       padding: 10px;
       overflow: hidden;
@@ -125,7 +129,7 @@
     .studio-quads::before {
       content: '';
       position: absolute;
-      top: 12px; bottom: 12px; left: 50%;
+      top: 12px; bottom: 12px; left: var(--col-split, 50%);
       width: 1px;
       background: linear-gradient(to bottom, transparent, rgba(56, 189, 248, 0.35) 15%, rgba(56, 189, 248, 0.35) 85%, transparent);
       pointer-events: none;
@@ -134,11 +138,139 @@
     .studio-quads::after {
       content: '';
       position: absolute;
-      left: 12px; right: 12px; top: 50%;
+      left: 12px; right: 12px; top: var(--row-split, 50%);
       height: 1px;
       background: linear-gradient(to right, transparent, rgba(56, 189, 248, 0.35) 15%, rgba(56, 189, 248, 0.35) 85%, transparent);
       pointer-events: none;
       z-index: 2;
+    }
+
+    /* Interactive Center Splitter Drag Handle */
+    .studio-splitter-center {
+      position: absolute;
+      top: calc(var(--row-split, 50%) - 11px);
+      left: calc(var(--col-split, 50%) - 11px);
+      width: 22px;
+      height: 22px;
+      background: #0284c7;
+      border: 2px solid #38bdf8;
+      border-radius: 50%;
+      z-index: 30;
+      cursor: move;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: bold;
+      color: #fff;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.7);
+      user-select: none;
+      transition: transform 0.1s, background 0.15s;
+    }
+    .studio-splitter-center:hover {
+      transform: scale(1.2);
+      background: #0ea5e9;
+    }
+
+    /* Window Control Button Group in Quad Header */
+    .quad-ctrls {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .btn-quad-tool {
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(71, 85, 105, 0.6);
+      color: #94a3b8;
+      width: 24px;
+      height: 24px;
+      min-width: 24px;
+      border-radius: 5px;
+      font-size: 11px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+      transition: all 0.15s;
+    }
+    .btn-quad-tool:hover {
+      background: #0284c7;
+      color: #fff;
+      border-color: #38bdf8;
+    }
+    .btn-quad-tool.close:hover {
+      background: #ef4444;
+      border-color: #f87171;
+    }
+    .btn-quad-tool.pip:hover {
+      background: #10b981;
+      border-color: #34d399;
+    }
+    .btn-quad-tool.popout:hover {
+      background: #8b5cf6;
+      border-color: #a78bfa;
+    }
+
+    /* Quad Focus / Maximized Mode */
+    .quad-cell.quad-maximized {
+      position: absolute !important;
+      top: 8px !important;
+      left: 8px !important;
+      right: 8px !important;
+      bottom: 8px !important;
+      width: calc(100% - 16px) !important;
+      height: calc(100% - 16px) !important;
+      z-index: 45 !important;
+      border-radius: 12px !important;
+      box-shadow: 0 0 35px rgba(0, 0, 0, 0.9) !important;
+    }
+
+    /* Quad Minimized State */
+    .quad-cell.quad-minimized .quad-body {
+      display: none !important;
+    }
+    .quad-cell.quad-minimized {
+      height: 38px !important;
+      min-height: 38px !important;
+      flex: 0 0 38px !important;
+    }
+
+    /* Quad Closed / Hidden State */
+    .quad-cell.quad-closed {
+      display: none !important;
+    }
+
+    /* Top Nav Window Manager Pinned Toggles */
+    .nav-windows-manager {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .btn-win-toggle {
+      background: rgba(30, 41, 59, 0.75);
+      border: 1px solid #475569;
+      color: #94a3b8;
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 10.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s;
+    }
+    .btn-win-toggle:hover {
+      background: #0284c7;
+      color: #fff;
+      border-color: #38bdf8;
+    }
+    .btn-win-toggle.active {
+      background: rgba(2, 132, 199, 0.25);
+      border-color: #38bdf8;
+      color: #7dd3fc;
+      font-weight: 700;
     }
 
     /* Individual Quad Cells */
@@ -367,6 +499,9 @@
       border-radius: 6px;
       padding: 6px 8px;
       color: #fff;
+      font-size: 11px;
+    }
+
     /* Media Controller Bar for Video & Photo Analysis (Aventuz Style) */
     .media-control-bar {
       position: absolute;
@@ -483,6 +618,8 @@
         padding: 0 8px;
       }
       .brand-badge { display: none; }
+      .nav-windows-manager { display: none !important; }
+      .studio-splitter-center { display: none !important; }
 
       .studio-quads {
         display: flex;
@@ -565,6 +702,26 @@
           <span class="brand-badge">استودیوی استعدادیابی هندبال</span>
         </div>
       </div>
+
+      <!-- Center: Windows Manager (Show / Hide / Restore Quads & Reset Layout) -->
+      <div class="nav-windows-manager" id="navWindowsManager">
+        <button type="button" class="btn-win-toggle active" data-quad="quadCamera" title="پنجره دوربین و آنالیز">
+          <span>📷 دوربین</span>
+        </button>
+        <button type="button" class="btn-win-toggle active" data-quad="quadAnthro" title="پنجره ۱۰ شاخص پیکرسنجی">
+          <span>📐 ۱۰ شاخص</span>
+        </button>
+        <button type="button" class="btn-win-toggle active" data-quad="quadTests" title="پنجره آزمون‌های میدانی">
+          <span>⚡ آزمون‌ها</span>
+        </button>
+        <button type="button" class="btn-win-toggle active" data-quad="quadAthleteReport" title="پنجره مشخصات و کارنامه">
+          <span>👤 کارنامه</span>
+        </button>
+        <button type="button" id="btnResetLayout" class="btn-win-toggle" title="بازنشانی اندازه و چیدمان استاندارد ۴ بخشی (۵۰/۵۰)">
+          <span>🔄 ریست ۲×۲</span>
+        </button>
+      </div>
+
       <div class="nav-actions">
         <button type="button" id="btnAthleteProfile" class="btn-header" title="مشخصات ورزشکار">
           <span>👤</span>
@@ -595,6 +752,9 @@
     <!-- Main Studio Grid (Desktop: 4 Quads in a Plus/Cross Grid | Mobile: 2 Distinct Sections) -->
     <main class="studio-quads" id="studioQuads">
 
+      <!-- Interactive Center Resizing Splitter Handle -->
+      <div class="studio-splitter-center" id="studioCenterSplitter" title="برای تغییر اندازه پنجره‌ها بکشید (دابل کلیک: ۵۰/۵۰)">✛</div>
+
       <!-- QUAD 1: Camera & Biomechanical Pose Overlay (Top-Right in RTL) -->
       <section class="quad-cell" id="quadCamera">
         <div class="quad-header">
@@ -612,9 +772,19 @@
               <span>🎛️ تنظیمات زاویه</span>
             </button>
           </div>
-          <div id="aiStatusBadge" style="display: flex; align-items: center; gap: 4px; font-size: 10px; color: #38bdf8;">
-            <span id="aiStatusDot" style="width: 7px; height: 7px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 6px #22c55e; display: inline-block;"></span>
-            <span id="aiStatusText">هوش مصنوعی فعال</span>
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <div id="aiStatusBadge" style="display: flex; align-items: center; gap: 4px; font-size: 10px; color: #38bdf8; margin-left: 6px;">
+              <span id="aiStatusDot" style="width: 7px; height: 7px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 6px #22c55e; display: inline-block;"></span>
+              <span id="aiStatusText">هوش مصنوعی فعال</span>
+            </div>
+            <!-- Window Control Tools -->
+            <div class="quad-ctrls">
+              <button type="button" class="btn-quad-tool pip" id="btnPipCamera" title="تصویر در تصویر شناور (PiP بومی ویندوز)">🗗</button>
+              <button type="button" class="btn-quad-tool popout" data-target="quadCamera" title="پنجره مستقل برای مانیتور دوم یا سالن">↗</button>
+              <button type="button" class="btn-quad-tool max" data-target="quadCamera" title="تمام‌صفحه / فوکوس (⛶)">⛶</button>
+              <button type="button" class="btn-quad-tool min" data-target="quadCamera" title="کوچک‌کردن (_)">_</button>
+              <button type="button" class="btn-quad-tool close" data-target="quadCamera" title="بستن موقت (✕)">✕</button>
+            </div>
           </div>
         </div>
         <div class="quad-body" style="padding: 4px; position: relative;">
@@ -674,10 +844,18 @@
       <!-- QUAD 2: 10 Handball Anthropometric Indicators (Top-Left in RTL) -->
       <section class="quad-cell mobile-active" id="quadAnthro">
         <div class="quad-header">
-          <span>📐 ۱۰ شاخص پیکرسنجی هندبال (ISAK & IHF)</span>
-          <button type="button" id="btnCalibHeight" class="btn-header primary" style="padding: 2px 7px; font-size: 10px;">
-            ⚡ کالیبره (<span id="btnCalibHeightVal">178</span>cm)
-          </button>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span>📐 ۱۰ شاخص پیکرسنجی هندبال (ISAK & IHF)</span>
+            <button type="button" id="btnCalibHeight" class="btn-header primary" style="padding: 2px 7px; font-size: 10px;">
+              ⚡ کالیبره (<span id="btnCalibHeightVal">178</span>cm)
+            </button>
+          </div>
+          <div class="quad-ctrls">
+            <button type="button" class="btn-quad-tool popout" data-target="quadAnthro" title="پنجره مستقل برای مانیتور دوم یا سالن">↗</button>
+            <button type="button" class="btn-quad-tool max" data-target="quadAnthro" title="تمام‌صفحه / فوکوس (⛶)">⛶</button>
+            <button type="button" class="btn-quad-tool min" data-target="quadAnthro" title="کوچک‌کردن (_)">_</button>
+            <button type="button" class="btn-quad-tool close" data-target="quadAnthro" title="بستن موقت (✕)">✕</button>
+          </div>
         </div>
         <div class="quad-body">
           <div class="metric-grid">
@@ -742,6 +920,12 @@
       <section class="quad-cell" id="quadTests">
         <div class="quad-header">
           <span id="panelTitleText">⚡ آزمون‌های حرکتی و کینماتیک بیومکانیک</span>
+          <div class="quad-ctrls">
+            <button type="button" class="btn-quad-tool popout" data-target="quadTests" title="پنجره مستقل برای مانیتور دوم یا سالن">↗</button>
+            <button type="button" class="btn-quad-tool max" data-target="quadTests" title="تمام‌صفحه / فوکوس (⛶)">⛶</button>
+            <button type="button" class="btn-quad-tool min" data-target="quadTests" title="کوچک‌کردن (_)">_</button>
+            <button type="button" class="btn-quad-tool close" data-target="quadTests" title="بستن موقت (✕)">✕</button>
+          </div>
         </div>
         <div class="quad-body">
           <!-- Mode Bar (Separated Squat & Lunge, Added Standing Long Jump & Plank) -->
@@ -970,10 +1154,18 @@
       <!-- QUAD 4: Athlete Hub & Official Report Export (Bottom-Left in RTL) -->
       <section class="quad-cell" id="quadAthleteReport">
         <div class="quad-header">
-          <span>👤 مشخصات ورزشکار & کارنامه استعدادیابی</span>
-          <button type="button" id="btnQuickEditAthlete" class="btn-header" style="padding: 2px 7px; font-size: 10px;">
-            ✏️ ویرایش
-          </button>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span>👤 مشخصات ورزشکار & کارنامه استعدادیابی</span>
+            <button type="button" id="btnQuickEditAthlete" class="btn-header" style="padding: 2px 7px; font-size: 10px;">
+              ✏️ ویرایش
+            </button>
+          </div>
+          <div class="quad-ctrls">
+            <button type="button" class="btn-quad-tool popout" data-target="quadAthleteReport" title="پنجره مستقل برای مانیتور دوم یا سالن">↗</button>
+            <button type="button" class="btn-quad-tool max" data-target="quadAthleteReport" title="تمام‌صفحه / فوکوس (⛶)">⛶</button>
+            <button type="button" class="btn-quad-tool min" data-target="quadAthleteReport" title="کوچک‌کردن (_)">_</button>
+            <button type="button" class="btn-quad-tool close" data-target="quadAthleteReport" title="بستن موقت (✕)">✕</button>
+          </div>
         </div>
         <div class="quad-body">
           <!-- Athlete Quick Info Card -->
