@@ -319,11 +319,14 @@
       align-items: center;
       justify-content: center;
     }
-    .camera-stage video, .camera-stage canvas {
+    .camera-stage video, .camera-stage img, .camera-stage canvas {
       position: absolute;
       top: 0; left: 0;
       width: 100%; height: 100%;
       object-fit: contain;
+    }
+    .camera-stage canvas {
+      z-index: 5;
     }
 
     /* Mode Pill Selector (Inside Quad 3) */
@@ -736,10 +739,10 @@
           <span>📜 بایگانی</span>
         </button>
         <button type="button" id="btnCamSwitch" class="btn-header" title="تغییر دوربین">📷</button>
-        <label for="mediaFileInput" id="lblUploadMedia" class="btn-header" style="cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="بارگذاری ویدیو یا عکس برای آنالیز">
+        <button type="button" id="btnUploadMedia" class="btn-header" title="بارگذاری ویدیو یا عکس برای آنالیز">
           <span>📁 ویدیو / عکس</span>
-        </label>
-        <input type="file" id="mediaFileInput" accept="video/*,image/*" style="display: none;">
+        </button>
+        <input type="file" id="mediaFileInput" accept="video/*,image/*" style="position: fixed; top: -9999px; left: -9999px; opacity: 0; width: 1px; height: 1px;">
         <button type="button" id="btnExportReport" class="btn-header primary" title="صدور کارنامه">📑 کارنامه</button>
       </div>
     </header>
@@ -1475,8 +1478,8 @@
         <!-- Header with Avatar, Title, Date, ID -->
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0284c7; padding-bottom: 8px; margin-bottom: 10px;">
           <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="width: 58px; height: 58px; border-radius: 50%; overflow: hidden; border: 2px solid #0284c7; background: #f1f5f9; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 0 6px rgba(0,0,0,0.15);">
-              <img id="rptAthleteAvatar" src="icon.svg" alt="عکس بازیکن" style="width: 100%; height: 100%; object-fit: cover;">
+            <div style="width: 58px; height: 58px; border-radius: 50%; overflow: hidden; border: 2px solid #0284c7; background: #f1f5f9; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 0 6px rgba(0,0,0,0.15); cursor: pointer;" id="rptAvatarContainer" title="عکس پروفایل بازیکن (برای تغییر یا عکس‌برداری کلیک کنید)">
+              <img id="rptAthleteAvatar" src="icon.svg" alt="عکس بازیکن" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='icon.svg'">
             </div>
             <div>
               <h2 style="font-size: 15px; color: #0284c7; margin-bottom: 2px;">کارنامه رسمی استعدادیابی و آزمون‌های میدانی هندبال</h2>

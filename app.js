@@ -628,14 +628,17 @@ async function loadPoseModel() {
 
       nativePose.onResults((results) => {
         if (results && results.poseLandmarks && results.poseLandmarks.length > 0) {
-          lastLandmarks = results.poseLandmarks.map((pt, idx) => ({
-            index: idx,
-            x: pt.x * canvasEl.width,
-            y: pt.y * canvasEl.height,
-            z: pt.z,
-            visibility: pt.visibility !== undefined ? pt.visibility : 1,
-            score: pt.visibility !== undefined ? pt.visibility : 1
-          }));
+          lastLandmarks = results.poseLandmarks.map((pt, idx) => {
+            const mapped = mapNormalizedToCanvas(pt, canvasEl.width, canvasEl.height);
+            return {
+              index: idx,
+              x: mapped.x,
+              y: mapped.y,
+              z: pt.z,
+              visibility: pt.visibility !== undefined ? pt.visibility : 1,
+              score: pt.visibility !== undefined ? pt.visibility : 1
+            };
+          });
           lastDetectTime = performance.now();
           processFrameBiomechanics(lastLandmarks);
         }
@@ -687,6 +690,58 @@ async function loadPoseModel() {
   console.log('ℹ️ Running in Smart Biomechanical Simulation Mode');
 }
 
+// Media aspect-ratio scaling and direct canvas rendering helpers
+function getActiveMediaDimensions() {
+  if (currentMediaSource === 'image' && imageEl && imageEl.naturalWidth > 0) {
+    return { sw: imageEl.naturalWidth, sh: imageEl.naturalHeight };
+  }
+  if (currentMediaSource === 'video' && videoEl && videoEl.videoWidth > 0) {
+    return { sw: videoEl.videoWidth, sh: videoEl.videoHeight };
+  }
+  return { sw: 0, sh: 0 };
+}
+
+function mapNormalizedToCanvas(pt, canvasW, canvasH) {
+  const { sw, sh } = getActiveMediaDimensions();
+  if (sw > 0 && sh > 0) {
+    const ratio = Math.min(canvasW / sw, canvasH / sh);
+    const dw = sw * ratio;
+    const dh = sh * ratio;
+    const dx = (canvasW - dw) / 2;
+    const dy = (canvasH - dh) / 2;
+    return {
+      x: dx + (pt.x * dw),
+      y: dy + (pt.y * dh)
+    };
+  }
+  return {
+    x: pt.x * canvasW,
+    y: pt.y * canvasH
+  };
+}
+
+function drawMediaToCanvas(targetCtx, media, targetW, targetH) {
+  if (!media) return;
+  const sw = media.videoWidth || media.naturalWidth || media.width;
+  const sh = media.videoHeight || media.naturalHeight || media.height;
+  if (!sw || !sh) return;
+
+  const hRatio = targetW / sw;
+  const vRatio = targetH / sh;
+  const ratio = Math.min(hRatio, vRatio);
+  const dw = sw * ratio;
+  const dh = sh * ratio;
+  const dx = (targetW - dw) / 2;
+  const dy = (targetH - dh) / 2;
+
+  // Letterbox background
+  targetCtx.fillStyle = '#070a13';
+  targetCtx.fillRect(0, 0, targetW, targetH);
+  try {
+    targetCtx.drawImage(media, 0, 0, sw, sh, dx, dy, dw, dh);
+  } catch(e) {}
+}
+
 // Main Frame Processing & Rendering Loop
 async function startDetectLoop() {
   isDetecting = true;
@@ -696,6 +751,13 @@ async function startDetectLoop() {
 
     resizeCanvas();
     ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+
+    // Render source media directly on canvas (100% immune to black screen / layering issues)
+    if (currentMediaSource === 'image' && imageEl && imageEl.complete && imageEl.naturalWidth > 0) {
+      drawMediaToCanvas(ctx, imageEl, canvasEl.width, canvasEl.height);
+    } else if (currentMediaSource === 'video' && videoEl && videoEl.readyState >= 2) {
+      drawMediaToCanvas(ctx, videoEl, canvasEl.width, canvasEl.height);
+    }
 
     if (isModelReady) {
       if (currentMediaSource === 'image' && imageEl && imageEl.naturalWidth > 0 && !imageEl._analyzed) {
@@ -2127,7 +2189,7 @@ function initUIEvents() {
 // MEDIA CONTROLLERS: Video & Photo Playback, Frame-by-Frame, Slow-Mo & Snapshots
 // ==========================================================================
 function initMediaControllers() {
-  const uploadBtn = document.getElementById('btnUploadMedia') || document.getElementById('btnUploadVideo');
+  const uploadBtn = document.getElementById('btnUploadMedia') || document.getElementById('lblUploadMedia') || document.getElementById('btnUploadVideo');
   const fileInput = document.getElementById('mediaFileInput') || document.getElementById('videoFileInput');
   const playPauseBtn = document.getElementById('btnMediaPlayPause');
   const playPauseIcon = document.getElementById('iconMediaPlayPause');
@@ -2142,46 +2204,115 @@ function initMediaControllers() {
   const loopContainer = document.getElementById('lblLoopContainer');
   const videoControlsRow = document.getElementById('mediaVideoControlsRow');
 
-  // Trigger file selection
-  uploadBtn?.addEventListener('click', () => fileInput?.click());
+  // Trigger file selection with reset so re-selecting same file fires change
+  uploadBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (fileInput) {
+      fileInput.value = '';
+      fileInput.click();
+    }
+  });
 
-  fileInput?.addEventListener('change', (e) => {
-    const file = e.target.files[0];
+  // Universal Media Loader Function (Video / Photo)
+  window.loadMediaFile = function(file) {
     if (!file) return;
 
-    const isVideo = file.type.startsWith('video/') || /\.(mp4|mov|webm|avi|mkv|m4v)$/i.test(file.name);
-    const isImage = file.type.startsWith('image/') || /\.(jpe?g|png|webp|bmp|gif)$/i.test(file.name);
+    const isVideo = file.type.startsWith('video/') || /\.(mp4|mov|webm|avi|mkv|m4v|3gp|wmv|flv)$/i.test(file.name);
+    const isImage = file.type.startsWith('image/') || /\.(jpe?g|png|webp|bmp|gif|svg)$/i.test(file.name);
 
     liveStatureSmoothed = 0; // Reset live stature smoothing for new media
 
     if (isVideo) {
       currentMediaSource = 'video';
-      if (imageEl) { imageEl.style.display = 'none'; imageEl.src = ''; }
+
+      // 1. Release live camera stream tracks
+      if (videoEl && videoEl.srcObject) {
+        try {
+          const tracks = videoEl.srcObject.getTracks ? videoEl.srcObject.getTracks() : [];
+          tracks.forEach(t => t.stop());
+        } catch(e) {}
+        videoEl.srcObject = null;
+      }
+
+      if (imageEl) {
+        imageEl.style.display = 'none';
+        imageEl.src = '';
+      }
+
       if (videoEl) {
         videoEl.style.display = 'block';
-        videoEl.srcObject = null;
-        videoEl.src = URL.createObjectURL(file);
+        if (videoEl._blobUrl) {
+          try { URL.revokeObjectURL(videoEl._blobUrl); } catch(e) {}
+        }
+        const blobUrl = URL.createObjectURL(file);
+        videoEl._blobUrl = blobUrl;
+        videoEl.src = blobUrl;
+        videoEl.muted = true;
+        videoEl.setAttribute('playsinline', '');
+        videoEl.setAttribute('webkit-playsinline', '');
         videoEl.loop = loopChk ? loopChk.checked : true;
         videoEl.playbackRate = speedSel ? parseFloat(speedSel.value) : 1.0;
-        videoEl.muted = true;
-        videoEl.play().catch(err => console.warn('Video play warning:', err));
+
+        // Essential: call load() to initiate media pipeline
+        videoEl.load();
+
+        videoEl.onloadeddata = () => {
+          resizeCanvas();
+          videoEl._needDetect = true;
+        };
+
+        videoEl.onloadedmetadata = () => {
+          resizeCanvas();
+          if (timeLbl && videoEl.duration) {
+            timeLbl.textContent = `00:00 / ${formatTimer(videoEl.duration)}`;
+          }
+        };
+
+        videoEl.play().then(() => {
+          if (playPauseIcon) playPauseIcon.textContent = '❚❚';
+        }).catch(err => {
+          console.warn('Video autoplay warning:', err);
+          if (playPauseIcon) playPauseIcon.textContent = '►';
+        });
+
         videoEl._needDetect = true;
       }
-      if (mediaControlBar) mediaControlBar.style.display = 'flex';
+
+      if (mediaControlBar) {
+        mediaControlBar.style.display = 'flex';
+        mediaControlBar.style.visibility = 'visible';
+      }
       if (videoControlsRow) videoControlsRow.style.display = 'flex';
       if (loopContainer) loopContainer.style.display = 'flex';
-      if (playPauseIcon) playPauseIcon.textContent = '❚❚';
+      if (timeLbl) timeLbl.textContent = `🎬 ${file.name}`;
       setAiStatus('ready', `در حال آنالیز ویدیوی: ${file.name}`);
+
     } else if (isImage) {
       currentMediaSource = 'image';
+
+      // 1. Pause & release video/camera
       if (videoEl) {
-        videoEl.pause();
+        try {
+          videoEl.pause();
+          if (videoEl.srcObject) {
+            const tracks = videoEl.srcObject.getTracks ? videoEl.srcObject.getTracks() : [];
+            tracks.forEach(t => t.stop());
+            videoEl.srcObject = null;
+          }
+        } catch(e) {}
         videoEl.style.display = 'none';
       }
+
       if (imageEl) {
         imageEl.style.display = 'block';
         imageEl._analyzed = false;
-        imageEl.src = URL.createObjectURL(file);
+        if (imageEl._blobUrl) {
+          try { URL.revokeObjectURL(imageEl._blobUrl); } catch(e) {}
+        }
+        const blobUrl = URL.createObjectURL(file);
+        imageEl._blobUrl = blobUrl;
+        imageEl.src = blobUrl;
+
         imageEl.onload = () => {
           resizeCanvas();
           imageEl._analyzed = false;
@@ -2201,12 +2332,44 @@ function initMediaControllers() {
           }
         };
       }
-      if (mediaControlBar) mediaControlBar.style.display = 'flex';
+
+      if (mediaControlBar) {
+        mediaControlBar.style.display = 'flex';
+        mediaControlBar.style.visibility = 'visible';
+      }
       if (videoControlsRow) videoControlsRow.style.display = 'none'; // Still image doesn't need video scrubber
       if (loopContainer) loopContainer.style.display = 'none';
       if (timeLbl) timeLbl.textContent = `🖼️ عکس: ${file.name}`;
       setAiStatus('ready', `در حال آنالیز تصویر: ${file.name}`);
     }
+  };
+
+  // File Input Change Listener
+  fileInput?.addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) {
+      window.loadMediaFile(file);
+    }
+  });
+
+  // Drag and Drop support on Camera Stage and Quad 1
+  const dropTargets = [document.getElementById('cameraStage'), document.getElementById('quadCamera')];
+  dropTargets.forEach(tgt => {
+    if (!tgt) return;
+    tgt.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      tgt.style.boxShadow = 'inset 0 0 0 2px #38bdf8';
+    });
+    tgt.addEventListener('dragleave', () => {
+      tgt.style.boxShadow = 'none';
+    });
+    tgt.addEventListener('drop', (e) => {
+      e.preventDefault();
+      tgt.style.boxShadow = 'none';
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        window.loadMediaFile(e.dataTransfer.files[0]);
+      }
+    });
   });
 
   // Play / Pause Toggle
@@ -2335,6 +2498,12 @@ function initMediaControllers() {
   document.getElementById('btnExportReport')?.addEventListener('click', openReport);
   document.getElementById('btnOpenReportModal')?.addEventListener('click', openReport);
   document.getElementById('btnCloseReportModal')?.addEventListener('click', () => reportModal?.classList.remove('active'));
+
+  // Clicking avatar container in Report opens profile to snap/upload photo
+  document.getElementById('rptAvatarContainer')?.addEventListener('click', () => {
+    reportModal?.classList.remove('active');
+    document.getElementById('btnAthleteProfile')?.click();
+  });
 
   // Quick Athlete Edit from Quad 4
   document.getElementById('btnQuickEditAthlete')?.addEventListener('click', () => {

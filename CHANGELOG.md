@@ -2,6 +2,16 @@
 
 All notable changes to the **MTM2 (Motion Tracker & Handball Talent Studio)** project will be documented in this file.
 
+## [v1.6.1] - 2026-09-29
+
+### 🎥 Media Video & Photo Playback & Black Screen Resolution
+- **Direct Canvas Frame Rendering**: The canvas engine now directly draws source video frames and photo bitmaps to canvas memory with aspect-ratio letterboxing. Completely eliminates black screen issues, z-index clashing, and element layering anomalies.
+- **HTML5 Video Pipeline Fix**: Explicitly invoked `videoEl.load()` when swapping from live webcam `MediaStream` to local video blob URL, ensuring the video resource loader triggers properly across all Chromium and Safari versions.
+- **Camera Stream Track Cleanup**: Active camera tracks are cleanly stopped upon loading external media, preventing webcam hardware locking.
+- **Media Upload Trigger Fix**: Upgraded upload button to dedicated interactive button (`#btnUploadMedia`) that clears `fileInput.value` before triggering picker, ensuring `change` events fire every time even when re-selecting the same file.
+- **Drag & Drop Media Loading**: Drop any video or photo directly into the camera quadrant (`#cameraStage` / `#quadCamera`) for immediate analysis.
+- **Official Report Avatar Sync**: Report profile avatar (`#rptAthleteAvatar`) dynamically displays the athlete's photo with fallback and click-to-edit integration.
+
 ## [v1.6.0] - 2026-09-29
 
 ### 🕸️ Spider / Radar Chart (نمودار عنکبوتی شایستگی‌های حرکتی و بدنی)
