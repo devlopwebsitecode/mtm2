@@ -8,8 +8,11 @@ let currentMode = 'anthro';
 let detector = null;
 let nativePose = null;
 let videoEl = null;
+let imageEl = null;
 let canvasEl = null;
 let ctx = null;
+let mediaControlBar = null;
+let currentMediaSource = 'camera'; // 'camera' | 'video' | 'image'
 let isModelReady = false;
 let isDetecting = false;
 let animFrameId = null;
@@ -107,14 +110,17 @@ let lastDetectTime = 0;
 // Initialize Application on Window Load
 window.addEventListener('DOMContentLoaded', () => {
   videoEl = document.getElementById('video');
+  imageEl = document.getElementById('stillImage');
   canvasEl = document.getElementById('overlay');
   ctx = canvasEl.getContext('2d');
+  mediaControlBar = document.getElementById('mediaControlBar');
 
   loadAthleteFromStorage();
   loadVisualSettingsFromStorage();
   initUIEvents();
   initMobileTabs();
   initVisualToggles();
+  initMediaControllers();
 
   // 1. Immediately start skeleton rendering loop so HUD and skeleton show in milliseconds!
   startDetectLoop();
@@ -186,11 +192,11 @@ async function setupCamera() {
       starter.style.display = 'none';
     });
 
-    // Upload Video
+    // Upload Video / Image
     uploadModalBtn?.addEventListener('click', () => {
       starterDismissed = true;
       starter.style.display = 'none';
-      document.getElementById('videoFileInput')?.click();
+      (document.getElementById('mediaFileInput') || document.getElementById('videoFileInput'))?.click();
     });
 
     // Enter Simulation
@@ -262,8 +268,20 @@ async function requestCameraStream(isExplicitUserClick = false) {
 
 function resizeCanvas() {
   const stage = document.getElementById('cameraStage');
-  const w = stage ? stage.clientWidth : (videoEl.videoWidth || window.innerWidth);
-  const h = stage ? stage.clientHeight : (videoEl.videoHeight || window.innerHeight);
+  let w = stage ? stage.clientWidth : window.innerWidth;
+  let h = stage ? stage.clientHeight : window.innerHeight;
+
+  if (currentMediaSource === 'image' && imageEl && imageEl.naturalWidth > 0) {
+    w = stage ? stage.clientWidth : imageEl.naturalWidth;
+    h = stage ? stage.clientHeight : imageEl.naturalHeight;
+  } else if (currentMediaSource === 'video' && videoEl && videoEl.videoWidth > 0) {
+    w = stage ? stage.clientWidth : videoEl.videoWidth;
+    h = stage ? stage.clientHeight : videoEl.videoHeight;
+  } else if (videoEl && videoEl.videoWidth > 0) {
+    w = stage ? stage.clientWidth : videoEl.videoWidth;
+    h = stage ? stage.clientHeight : videoEl.videoHeight;
+  }
+
   if (w > 0 && h > 0 && (canvasEl.width !== w || canvasEl.height !== h)) {
     canvasEl.width = w;
     canvasEl.height = h;
@@ -381,28 +399,59 @@ async function startDetectLoop() {
     resizeCanvas();
     ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
 
-    const hasVideo = videoEl && videoEl.readyState >= 2 && !videoEl.paused && !videoEl.ended;
-
-    if (hasVideo && isModelReady) {
-      try {
-        if (nativePose) {
-          await nativePose.send({ image: videoEl });
-        } else if (detector) {
-          const poses = await detector.estimatePoses(videoEl, { maxPoses: 1, flipHorizontal: false });
-          if (poses && poses.length > 0) {
-            lastLandmarks = poses[0].keypoints;
-            lastDetectTime = performance.now();
-            processFrameBiomechanics(lastLandmarks);
+    if (isModelReady) {
+      if (currentMediaSource === 'image' && imageEl && imageEl.naturalWidth > 0 && !imageEl._analyzed) {
+        imageEl._analyzed = true;
+        try {
+          if (nativePose) {
+            await nativePose.send({ image: imageEl });
+          } else if (detector) {
+            const poses = await detector.estimatePoses(imageEl, { maxPoses: 1, flipHorizontal: false });
+            if (poses && poses.length > 0) {
+              lastLandmarks = poses[0].keypoints;
+              lastDetectTime = performance.now();
+              processFrameBiomechanics(lastLandmarks);
+            }
           }
+        } catch (err) {
+          console.warn('Image detection error:', err);
         }
-      } catch (err) {
-        // Ignored frame error
+      } else if (currentMediaSource === 'video' && videoEl && videoEl.readyState >= 2) {
+        const shouldDetect = !videoEl.paused || videoEl._needDetect;
+        if (shouldDetect) {
+          videoEl._needDetect = false;
+          try {
+            if (nativePose) {
+              await nativePose.send({ image: videoEl });
+            } else if (detector) {
+              const poses = await detector.estimatePoses(videoEl, { maxPoses: 1, flipHorizontal: false });
+              if (poses && poses.length > 0) {
+                lastLandmarks = poses[0].keypoints;
+                lastDetectTime = performance.now();
+                processFrameBiomechanics(lastLandmarks);
+              }
+            }
+          } catch (err) {}
+        }
+      } else if (currentMediaSource === 'camera' && videoEl && videoEl.readyState >= 2 && !videoEl.paused) {
+        try {
+          if (nativePose) {
+            await nativePose.send({ image: videoEl });
+          } else if (detector) {
+            const poses = await detector.estimatePoses(videoEl, { maxPoses: 1, flipHorizontal: false });
+            if (poses && poses.length > 0) {
+              lastLandmarks = poses[0].keypoints;
+              lastDetectTime = performance.now();
+              processFrameBiomechanics(lastLandmarks);
+            }
+          }
+        } catch (err) {}
       }
     }
 
     // Render Overlay
     const now = performance.now();
-    const hasRecentDetection = lastLandmarks && (now - lastDetectTime < 1200);
+    const hasRecentDetection = (currentMediaSource !== 'camera' && lastLandmarks) || (lastLandmarks && (now - lastDetectTime < 1200));
 
     if (hasRecentDetection) {
       renderFullBiomechanicalOverlay(lastLandmarks);
@@ -1776,22 +1825,202 @@ function initUIEvents() {
     }
   });
 
-  // Video Upload
-  const uploadBtn = document.getElementById('btnUploadVideo');
-  const fileInput = document.getElementById('videoFileInput');
-  uploadBtn?.addEventListener('click', () => fileInput.click());
+// ==========================================================================
+// MEDIA CONTROLLERS: Video & Photo Playback, Frame-by-Frame, Slow-Mo & Snapshots
+// ==========================================================================
+function initMediaControllers() {
+  const uploadBtn = document.getElementById('btnUploadMedia') || document.getElementById('btnUploadVideo');
+  const fileInput = document.getElementById('mediaFileInput') || document.getElementById('videoFileInput');
+  const playPauseBtn = document.getElementById('btnMediaPlayPause');
+  const playPauseIcon = document.getElementById('iconMediaPlayPause');
+  const stepBackBtn = document.getElementById('btnMediaStepBack');
+  const stepFwdBtn = document.getElementById('btnMediaStepForward');
+  const scrubber = document.getElementById('inputMediaScrubber');
+  const timeLbl = document.getElementById('lblMediaTime');
+  const speedSel = document.getElementById('selMediaSpeed');
+  const loopChk = document.getElementById('chkMediaLoop');
+  const liveBtn = document.getElementById('btnReturnToLiveCamera');
+  const snapshotBtn = document.getElementById('btnSnapshotFrame');
+  const loopContainer = document.getElementById('lblLoopContainer');
+  const videoControlsRow = document.getElementById('mediaVideoControlsRow');
+
+  // Trigger file selection
+  uploadBtn?.addEventListener('click', () => fileInput?.click());
+
   fileInput?.addEventListener('change', (e) => {
     const file = e.target.files[0];
-    if (file) {
-      liveStatureSmoothed = 0; // Reset live smoothing for the new video
-      videoEl.srcObject = null;
-      videoEl.src = URL.createObjectURL(file);
-      videoEl.loop = true;
-      videoEl.muted = true;
-      videoEl.play();
-      setAiStatus('ready', `در حال تحلیل ویدیوی آزمون: ${file.name}`);
+    if (!file) return;
+
+    const isVideo = file.type.startsWith('video/') || /\.(mp4|mov|webm|avi|mkv|m4v)$/i.test(file.name);
+    const isImage = file.type.startsWith('image/') || /\.(jpe?g|png|webp|bmp|gif)$/i.test(file.name);
+
+    liveStatureSmoothed = 0; // Reset live stature smoothing for new media
+
+    if (isVideo) {
+      currentMediaSource = 'video';
+      if (imageEl) { imageEl.style.display = 'none'; imageEl.src = ''; }
+      if (videoEl) {
+        videoEl.style.display = 'block';
+        videoEl.srcObject = null;
+        videoEl.src = URL.createObjectURL(file);
+        videoEl.loop = loopChk ? loopChk.checked : true;
+        videoEl.playbackRate = speedSel ? parseFloat(speedSel.value) : 1.0;
+        videoEl.muted = true;
+        videoEl.play().catch(err => console.warn('Video play warning:', err));
+        videoEl._needDetect = true;
+      }
+      if (mediaControlBar) mediaControlBar.style.display = 'flex';
+      if (videoControlsRow) videoControlsRow.style.display = 'flex';
+      if (loopContainer) loopContainer.style.display = 'flex';
+      if (playPauseIcon) playPauseIcon.textContent = '❚❚';
+      setAiStatus('ready', `در حال آنالیز ویدیوی: ${file.name}`);
+    } else if (isImage) {
+      currentMediaSource = 'image';
+      if (videoEl) {
+        videoEl.pause();
+        videoEl.style.display = 'none';
+      }
+      if (imageEl) {
+        imageEl.style.display = 'block';
+        imageEl._analyzed = false;
+        imageEl.src = URL.createObjectURL(file);
+        imageEl.onload = () => {
+          resizeCanvas();
+          imageEl._analyzed = false;
+          // Trigger instant AI detection on the photo
+          if (isModelReady) {
+            if (nativePose) {
+              nativePose.send({ image: imageEl });
+            } else if (detector) {
+              detector.estimatePoses(imageEl, { maxPoses: 1, flipHorizontal: false }).then(poses => {
+                if (poses && poses.length > 0) {
+                  lastLandmarks = poses[0].keypoints;
+                  lastDetectTime = performance.now();
+                  processFrameBiomechanics(lastLandmarks);
+                }
+              });
+            }
+          }
+        };
+      }
+      if (mediaControlBar) mediaControlBar.style.display = 'flex';
+      if (videoControlsRow) videoControlsRow.style.display = 'none'; // Still image doesn't need video scrubber
+      if (loopContainer) loopContainer.style.display = 'none';
+      if (timeLbl) timeLbl.textContent = `🖼️ عکس: ${file.name}`;
+      setAiStatus('ready', `در حال آنالیز تصویر: ${file.name}`);
     }
   });
+
+  // Play / Pause Toggle
+  playPauseBtn?.addEventListener('click', () => {
+    if (!videoEl) return;
+    if (videoEl.paused) {
+      videoEl.play();
+      if (playPauseIcon) playPauseIcon.textContent = '❚❚';
+    } else {
+      videoEl.pause();
+      if (playPauseIcon) playPauseIcon.textContent = '►';
+    }
+  });
+
+  // Stepping 1 frame (0.04s) backward
+  stepBackBtn?.addEventListener('click', () => {
+    if (!videoEl) return;
+    videoEl.pause();
+    if (playPauseIcon) playPauseIcon.textContent = '►';
+    videoEl.currentTime = Math.max(0, videoEl.currentTime - 0.04);
+    videoEl._needDetect = true;
+  });
+
+  // Stepping 1 frame (0.04s) forward
+  stepFwdBtn?.addEventListener('click', () => {
+    if (!videoEl) return;
+    videoEl.pause();
+    if (playPauseIcon) playPauseIcon.textContent = '►';
+    videoEl.currentTime = Math.min(videoEl.duration || 9999, videoEl.currentTime + 0.04);
+    videoEl._needDetect = true;
+  });
+
+  // Timeline Scrubber
+  scrubber?.addEventListener('input', () => {
+    if (!videoEl || !videoEl.duration) return;
+    videoEl.currentTime = (scrubber.value / 100) * videoEl.duration;
+    videoEl._needDetect = true;
+  });
+
+  // Video Time Update
+  videoEl?.addEventListener('timeupdate', () => {
+    if (currentMediaSource !== 'video' || !videoEl.duration) return;
+    if (scrubber && document.activeElement !== scrubber) {
+      scrubber.value = (videoEl.currentTime / videoEl.duration) * 100;
+    }
+    if (timeLbl) {
+      timeLbl.textContent = `${formatTimer(videoEl.currentTime)} / ${formatTimer(videoEl.duration)}`;
+    }
+  });
+
+  videoEl?.addEventListener('ended', () => {
+    if (playPauseIcon) playPauseIcon.textContent = '►';
+  });
+
+  // Playback Speed
+  speedSel?.addEventListener('change', () => {
+    if (videoEl) videoEl.playbackRate = parseFloat(speedSel.value);
+  });
+
+  // Loop toggle
+  loopChk?.addEventListener('change', () => {
+    if (videoEl) videoEl.loop = loopChk.checked;
+  });
+
+  // Return to Live Camera
+  liveBtn?.addEventListener('click', async () => {
+    currentMediaSource = 'camera';
+    if (imageEl) { imageEl.style.display = 'none'; imageEl.src = ''; }
+    if (videoEl) {
+      videoEl.style.display = 'block';
+      videoEl.pause();
+      videoEl.src = '';
+    }
+    if (mediaControlBar) mediaControlBar.style.display = 'none';
+    setAiStatus('loading', 'اتصال مجدد به وب‌کم زنده...');
+    await setupCamera();
+  });
+
+  // Snapshot Analyzed Frame (Merge source video/image + canvas overlay)
+  snapshotBtn?.addEventListener('click', () => {
+    try {
+      const snapCanvas = document.createElement('canvas');
+      snapCanvas.width = canvasEl.width;
+      snapCanvas.height = canvasEl.height;
+      const sCtx = snapCanvas.getContext('2d');
+
+      // 1. Draw source video or image
+      if (currentMediaSource === 'image' && imageEl && imageEl.style.display !== 'none') {
+        sCtx.drawImage(imageEl, 0, 0, snapCanvas.width, snapCanvas.height);
+      } else if (videoEl && videoEl.style.display !== 'none') {
+        sCtx.drawImage(videoEl, 0, 0, snapCanvas.width, snapCanvas.height);
+      }
+
+      // 2. Draw overlay skeleton, angles, badges & dimensions
+      sCtx.drawImage(canvasEl, 0, 0);
+
+      // 3. Add timestamp and branding badge in corner
+      sCtx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      sCtx.fillRect(10, snapCanvas.height - 30, 240, 22);
+      sCtx.fillStyle = '#38bdf8';
+      sCtx.font = 'bold 11px Tahoma, sans-serif';
+      sCtx.fillText(`حرکت‌سنج ۲ • آنالیز بیومکانیک (${athlete.name})`, 16, snapCanvas.height - 15);
+
+      const a = document.createElement('a');
+      a.download = `MTM2_Analysis_${athlete.name.replace(/\s+/g, '_')}_${Date.now()}.png`;
+      a.href = snapCanvas.toDataURL('image/png');
+      a.click();
+    } catch (err) {
+      alert('خطا در ذخیره تصویر آنالیز: ' + err.message);
+    }
+  });
+}
 
   // Camera Switch
   document.getElementById('btnCamSwitch')?.addEventListener('click', async () => {
