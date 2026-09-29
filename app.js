@@ -57,14 +57,48 @@ let anthroData = {
   phvAgeOffset: '+1.2 سال (پس از اوج رشد قدی)'
 };
 
-// 5 Kinematic Tests State
+// 8 Kinematic Tests State (Separated Squat & Lunge, Added Standing Long Jump & Plank)
 let testsData = {
   run5m: { time: 0, speed: 0, bestTime: null, state: 'ready', startX: null, finishX: null },
   jump: { reps: 0, maxHeight: 0, avgFlight: 0, contactTime: 0, power: 0, inAir: false, takeoffTime: 0, landingTime: 0 },
+  longJump: { baselineX: null, distanceCm: 0, bestDist: 0, state: 'standing', prepAngle: 180 },
+  plank: { timeSec: 0, isRunning: false, timerInterval: null, curAngle: 180, status: 'ready' },
   pushup: { reps: 0, state: 'up', curAngle: 180, minAngle: 180 },
   situp: { reps: 0, state: 'down', curAngle: 25 },
-  squat: { reps: 0, state: 'up', curAngle: 180, isValgus: false }
+  squat: { reps: 0, state: 'up', curAngle: 180, isValgus: false },
+  lunge: { reps: 0, state: 'up', frontKnee: 180, rearKnee: 180, torsoTilt: 0, stability: 'تراز' }
 };
+
+// Live Biomechanical Visual Settings (Matches Aventuz Academy Reference Images 2 & 3)
+let visualSettings = {
+  jointRadius: 4.5,            // Bolgrootte (2 to 10 px)
+  lineWidth: 2.0,              // Lijndikte (1 to 6 px)
+  showComplementAngle: false,  // Toon hoek aan de andere kant van het gewricht
+  showTorsoBox: true,          // Torso & Pelvis Alignment Box
+  elbowTarget: 90,             // Gewenste hoek elleboog
+  elbowTolerance: 10,          // Delta-bereik elleboog
+  armTrack: 'both',            // Beide / Links / Rechts
+  kneeTarget: 90,              // Gewenste hoek knieën
+  lungeRearTarget: 120         // Gewenste hoek knie achter
+};
+
+function loadVisualSettingsFromStorage() {
+  try {
+    const saved = localStorage.getItem('mtm2_visual_settings');
+    if (saved) visualSettings = Object.assign(visualSettings, JSON.parse(saved));
+  } catch(e) {}
+}
+
+function saveVisualSettingsToStorage() {
+  localStorage.setItem('mtm2_visual_settings', JSON.stringify(visualSettings));
+}
+
+// Plank Timer Helper
+function formatTimer(sec) {
+  const m = Math.floor(sec / 60).toString().padStart(2, '0');
+  const s = Math.floor(sec % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
 
 // Last detected landmarks cache for smooth drawing
 let lastLandmarks = null;
@@ -77,6 +111,7 @@ window.addEventListener('DOMContentLoaded', () => {
   ctx = canvasEl.getContext('2d');
 
   loadAthleteFromStorage();
+  loadVisualSettingsFromStorage();
   initUIEvents();
   initMobileTabs();
   initVisualToggles();
@@ -654,7 +689,83 @@ function processFrameBiomechanics(kp) {
     }
   }
 
-  // 4. Push-up Mode
+  // 4. Standing Long Jump Mode (پرش طول درجا)
+  else if (currentMode === 'longJump') {
+    const lAk = lAnkle, rAk = rAnkle;
+    const lKn = lKnee, rKn = rKnee;
+    const lHp = lHip, rHp = rHip;
+    if (lAk && rAk) {
+      const curX = (lAk.x + rAk.x) / 2;
+      const kneePt = lKn || rKn;
+      const hipPt = lHp || rHp;
+      const prepAngle = (kneePt && hipPt) ? Math.round(calcAngle(hipPt, kneePt, lAk || rAk)) : 180;
+      testsData.longJump.prepAngle = prepAngle;
+
+      const angleEl = document.getElementById('valLongJumpAngle');
+      if (angleEl) angleEl.textContent = prepAngle + '°';
+
+      if (testsData.longJump.baselineX === null) {
+        testsData.longJump.baselineX = curX;
+      }
+
+      const deltaPx = Math.abs(curX - testsData.longJump.baselineX);
+      const distCm = Math.round(deltaPx * cmPerPx * 10) / 10;
+      testsData.longJump.distanceCm = distCm;
+
+      const phaseEl = document.getElementById('valLongJumpPhase');
+      const distEl = document.getElementById('valLongJumpDist');
+      const bestEl = document.getElementById('valLongJumpBest');
+
+      if (distEl) distEl.textContent = distCm.toFixed(1) + ' cm';
+
+      if (prepAngle < 125 && testsData.longJump.state === 'standing') {
+        testsData.longJump.state = 'prep';
+        if (phaseEl) phaseEl.textContent = 'آماده‌سازی جهش (فلکشن زانوها)';
+      } else if (deltaPx > 35 && testsData.longJump.state === 'prep') {
+        testsData.longJump.state = 'flight';
+        if (phaseEl) phaseEl.textContent = 'فاز پرواز و امتداد بدن';
+      } else if (testsData.longJump.state === 'flight' && deltaPx > 40) {
+        testsData.longJump.state = 'landed';
+        if (distCm > testsData.longJump.bestDist) {
+          testsData.longJump.bestDist = distCm;
+        }
+        if (phaseEl) phaseEl.textContent = 'فرود موفق و تثبیت رکورد';
+        if (bestEl) bestEl.textContent = testsData.longJump.bestDist.toFixed(1) + ' cm';
+      }
+    }
+  }
+
+  // 5. Plank Endurance Mode (آزمون استقامت پلانک)
+  else if (currentMode === 'plank') {
+    const shPt = rShoulder || lShoulder;
+    const hpPt = rHip || lHip;
+    const akPt = rAnkle || lAnkle;
+    if (shPt && hpPt && akPt) {
+      const angle = Math.round(calcAngle(shPt, hpPt, akPt));
+      testsData.plank.curAngle = angle;
+      const angleEl = document.getElementById('valPlankAngle');
+      if (angleEl) angleEl.textContent = angle + '°';
+
+      const statusEl = document.getElementById('valPlankStatus');
+      if (statusEl) {
+        if (angle >= 165 && angle <= 192) {
+          statusEl.textContent = 'تراز عالی ستون فقرات و تنه (پلانک استاندارد)';
+          statusEl.style.color = '#4ade80';
+          testsData.plank.status = 'good';
+        } else if (angle < 165) {
+          statusEl.textContent = 'افتادگی لگن (Sagging) - باسن را بالا بیاورید';
+          statusEl.style.color = '#f87171';
+          testsData.plank.status = 'sagging';
+        } else {
+          statusEl.textContent = 'بالا بردن بیش از حد لگن (Piking) - باسن را پایین بیاورید';
+          statusEl.style.color = '#fbbf24';
+          testsData.plank.status = 'piking';
+        }
+      }
+    }
+  }
+
+  // 6. Push-up Mode (شنا سوئدی)
   else if (currentMode === 'pushup') {
     const elbowPt = rElbow || lElbow;
     const shoulderPt = rShoulder || lShoulder;
@@ -666,20 +777,20 @@ function processFrameBiomechanics(kp) {
       if (angleEl) angleEl.textContent = testsData.pushup.curAngle + '°';
 
       const statusEl = document.getElementById('valPushupDepthState');
-      if (testsData.pushup.state === 'up' && angle < 92) {
+      if (testsData.pushup.state === 'up' && angle < (visualSettings.elbowTarget + 2)) {
         testsData.pushup.state = 'down';
-        if (statusEl) statusEl.textContent = 'عمق مطلوب ۹۰ درجه ثبت شد';
+        if (statusEl) statusEl.textContent = 'عمق استاندارد آرنج ثبت شد';
       } else if (testsData.pushup.state === 'down' && angle > 155) {
         testsData.pushup.state = 'up';
         testsData.pushup.reps++;
         const repsEl = document.getElementById('valPushupReps');
         if (repsEl) repsEl.textContent = testsData.pushup.reps;
-        if (statusEl) statusEl.textContent = 'تکرار صحیح کامل گردید';
+        if (statusEl) statusEl.textContent = 'تکرار کامل و صحیح';
       }
     }
   }
 
-  // 5. Sit-up Mode
+  // 7. Sit-up Mode (درازنشست)
   else if (currentMode === 'situp') {
     const hipPt = rHip || lHip;
     const shoulderPt = rShoulder || lShoulder;
@@ -704,7 +815,7 @@ function processFrameBiomechanics(kp) {
     }
   }
 
-  // 6. Squat & Lunge Mode
+  // 8. Deep Squat Mode (اسکات عمیق تخصصی)
   else if (currentMode === 'squat') {
     const hipPt = rHip || lHip;
     const kneePt = rKnee || lKnee;
@@ -716,15 +827,92 @@ function processFrameBiomechanics(kp) {
       if (angleEl) angleEl.textContent = testsData.squat.curAngle + '°';
 
       const depthEl = document.getElementById('valSquatDepthStatus');
-      if (testsData.squat.state === 'up' && angle < 95) {
+      const valgusEl = document.getElementById('valSquatValgusStatus');
+
+      // Knee Valgus Check (Inward deviation)
+      const expectedKneeX = (hipPt.x + anklePt.x) / 2;
+      const valgusOffset = Math.abs(kneePt.x - expectedKneeX);
+      if (valgusOffset > 22) {
+        testsData.squat.isValgus = true;
+        if (valgusEl) {
+          valgusEl.textContent = 'هشدار انحراف والگوس زانو (ریسک ACL)';
+          valgusEl.style.color = '#f87171';
+        }
+      } else {
+        testsData.squat.isValgus = false;
+        if (valgusEl) {
+          valgusEl.textContent = 'تراز استاندارد زانو با پنجه پا';
+          valgusEl.style.color = '#38bdf8';
+        }
+      }
+
+      // Repetition Counting with Target Knee Angle
+      const target = visualSettings.kneeTarget || 90;
+      if (testsData.squat.state === 'up' && angle <= target + 5) {
         testsData.squat.state = 'down';
-        if (depthEl) depthEl.textContent = 'عمق استاندارد ۹۰ درجه تأیید شد';
-      } else if (testsData.squat.state === 'down' && angle > 160) {
+        if (depthEl) {
+          depthEl.textContent = `عمق استاندارد اسکات (${target}°) تأیید شد`;
+          depthEl.style.color = '#4ade80';
+        }
+      } else if (testsData.squat.state === 'down' && angle >= 155) {
         testsData.squat.state = 'up';
         testsData.squat.reps++;
         const repsEl = document.getElementById('valSquatReps');
         if (repsEl) repsEl.textContent = testsData.squat.reps;
-        if (depthEl) depthEl.textContent = 'ایستادن کامل';
+        if (depthEl) {
+          depthEl.textContent = 'ایستادن کامل';
+          depthEl.style.color = '#94a3b8';
+        }
+      }
+    }
+  }
+
+  // 9. Lunge Analysis Mode (آزمون تخصصی لانژ - کاملاً مطابق تصویر ۱ کاربر)
+  else if (currentMode === 'lunge') {
+    const lKn = lKnee, rKn = rKnee;
+    const lHp = lHip, rHp = rHip;
+    const lAk = lAnkle, rAk = rAnkle;
+
+    if (lKn && rKn && lHp && rHp && lAk && rAk) {
+      const angL = calcAngle(lHp, lKn, lAk);
+      const angR = calcAngle(rHp, rKn, rAk);
+
+      // Determine Front Knee (smaller bend angle) vs Rear Knee
+      const frontKnee = Math.round(Math.min(angL, angR));
+      const rearKnee = Math.round(Math.max(angL, angR));
+      testsData.lunge.frontKnee = frontKnee;
+      testsData.lunge.rearKnee = rearKnee;
+
+      const fEl = document.getElementById('valLungeFrontKnee');
+      const rEl = document.getElementById('valLungeRearKnee');
+      if (fEl) fEl.textContent = frontKnee + '°';
+      if (rEl) rEl.textContent = rearKnee + '°';
+
+      // Torso Alignment relative to vertical (Mid-Shoulder to Mid-Hip)
+      const mShX = ((lShoulder?.x || 0) + (rShoulder?.x || 0)) / 2;
+      const mShY = ((lShoulder?.y || 0) + (rShoulder?.y || 0)) / 2;
+      const mHpX = (lHp.x + rHp.x) / 2;
+      const mHpY = (lHp.y + rHp.y) / 2;
+      const torsoRad = Math.atan2(Math.abs(mShX - mHpX), Math.max(1, Math.abs(mHpY - mShY)));
+      const torsoDeg = Math.round(torsoRad * (180 / Math.PI));
+      testsData.lunge.torsoTilt = torsoDeg;
+
+      const torsoEl = document.getElementById('valLungeTorso');
+      if (torsoEl) {
+        torsoEl.textContent = `${torsoDeg}° (${torsoDeg <= 10 ? 'عمودی و مستقیم' : 'شیب‌دار'})`;
+        torsoEl.style.color = torsoDeg <= 10 ? '#4ade80' : '#fbbf24';
+      }
+
+      // Repetition logic: front knee reaches target (90°) and rear knee ~120°
+      const fTarget = visualSettings.kneeTarget || 90;
+      const rTarget = visualSettings.lungeRearTarget || 120;
+      if (testsData.lunge.state === 'up' && frontKnee <= fTarget + 10 && rearKnee <= rTarget + 15) {
+        testsData.lunge.state = 'down';
+      } else if (testsData.lunge.state === 'down' && frontKnee >= 150 && rearKnee >= 150) {
+        testsData.lunge.state = 'up';
+        testsData.lunge.reps++;
+        const repsEl = document.getElementById('valLungeReps');
+        if (repsEl) repsEl.textContent = testsData.lunge.reps;
       }
     }
   }
@@ -760,69 +948,100 @@ function renderFullBiomechanicalOverlay(kp) {
     return null;
   };
 
-  // 1. Draw Skeleton Bones
+  // 1. Draw Torso Alignment Box (Matches Screenshot 1 Green Torso Box)
+  if (showSkeleton && visualSettings.showTorsoBox) {
+    const lSh = getPt(LM.LEFT_SHOULDER), rSh = getPt(LM.RIGHT_SHOULDER);
+    const lHp = getPt(LM.LEFT_HIP), rHp = getPt(LM.RIGHT_HIP);
+    if (lSh && rSh && lHp && rHp) {
+      ctx.save();
+      // Outer Torso Box
+      ctx.beginPath();
+      ctx.moveTo(lSh.x, lSh.y);
+      ctx.lineTo(rSh.x, rSh.y);
+      ctx.lineTo(rHp.x, rHp.y);
+      ctx.lineTo(lHp.x, lHp.y);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(16, 185, 129, 0.08)';
+      ctx.fill();
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = Math.max(1.5, visualSettings.lineWidth * 1.1);
+      ctx.stroke();
+
+      // Dashed vertical torso alignment guides
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = 'rgba(52, 211, 153, 0.45)';
+      ctx.lineWidth = 1.2;
+
+      ctx.beginPath();
+      const p1Top = { x: lSh.x + (rSh.x - lSh.x) * 0.33, y: lSh.y + (rSh.y - lSh.y) * 0.33 };
+      const p1Bot = { x: lHp.x + (rHp.x - lHp.x) * 0.33, y: lHp.y + (rHp.y - lHp.y) * 0.33 };
+      ctx.moveTo(p1Top.x, p1Top.y);
+      ctx.lineTo(p1Bot.x, p1Bot.y);
+
+      const p2Top = { x: lSh.x + (rSh.x - lSh.x) * 0.67, y: lSh.y + (rSh.y - lSh.y) * 0.67 };
+      const p2Bot = { x: lHp.x + (rHp.x - lHp.x) * 0.67, y: lHp.y + (rHp.y - lHp.y) * 0.67 };
+      ctx.moveTo(p2Top.x, p2Top.y);
+      ctx.lineTo(p2Bot.x, p2Bot.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+  }
+
+  // 2. Draw Skeleton Bones with Visual Settings Line Width and Segment Colors
   if (showSkeleton) {
-    ctx.lineWidth = 3.5;
+    ctx.lineWidth = visualSettings.lineWidth || 2.0;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#00f2fe';
-    ctx.shadowColor = '#00f2fe';
-    ctx.shadowBlur = 10;
 
     BONE_CONNECTIONS.forEach(([i1, i2]) => {
       const p1 = getPt(i1);
       const p2 = getPt(i2);
       if (p1 && p2) {
+        // Color-code segments matching modern biomechanics HUD
+        let strokeColor = '#38bdf8';
+        if (i1 >= LM.LEFT_SHOULDER && i2 <= LM.LEFT_THUMB) {
+          strokeColor = '#f59e0b'; // Left arm: Gold/Amber
+        } else if (i1 >= LM.RIGHT_SHOULDER && i2 <= LM.RIGHT_THUMB) {
+          strokeColor = '#f43f5e'; // Right arm: Coral/Rose
+        } else if (i1 >= LM.LEFT_HIP && i2 <= LM.LEFT_FOOT_INDEX) {
+          strokeColor = '#10b981'; // Left leg: Emerald
+        } else if (i1 >= LM.RIGHT_HIP && i2 <= LM.RIGHT_FOOT_INDEX) {
+          strokeColor = '#f43f5e'; // Right leg: Coral/Rose
+        } else if (i1 <= LM.MOUTH_RIGHT) {
+          strokeColor = '#94a3b8'; // Face
+        }
+
         ctx.beginPath();
+        ctx.strokeStyle = strokeColor;
         ctx.moveTo(p1.x, p1.y);
         ctx.lineTo(p2.x, p2.y);
         ctx.stroke();
       }
     });
 
-    // Virtual Spine: Mid-Shoulders to Mid-Hips
-    const lSh = getPt(LM.LEFT_SHOULDER), rSh = getPt(LM.RIGHT_SHOULDER);
-    const lHp = getPt(LM.LEFT_HIP), rHp = getPt(LM.RIGHT_HIP);
-    if (lSh && rSh && lHp && rHp) {
-      const midShoulder = { x: (lSh.x + rSh.x) / 2, y: (lSh.y + rSh.y) / 2 };
-      const midHip = { x: (lHp.x + rHp.x) / 2, y: (lHp.y + rHp.y) / 2 };
-      ctx.beginPath();
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 4;
-      ctx.moveTo(midShoulder.x, midShoulder.y);
-      ctx.lineTo(midHip.x, midHip.y);
-      ctx.stroke();
-    }
-    ctx.shadowBlur = 0;
-
-    // 2. Draw Landmark Joint Nodes
+    // 3. Draw Clean Landmark Joint Nodes (White Solid Dots with Dark Border - Bolgrootte)
+    const dotR = visualSettings.jointRadius || 4.5;
     for (let i = 0; i <= 32; i++) {
       const pt = getPt(i);
       if (pt) {
-        // Outer glowing ring
         ctx.beginPath();
-        ctx.arc(pt.x, pt.y, 5.5, 0, 2 * Math.PI);
-        ctx.fillStyle = '#0284c7';
-        ctx.fill();
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#38bdf8';
-        ctx.stroke();
-
-        // Inner white nucleus
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, 2.5, 0, 2 * Math.PI);
+        ctx.arc(pt.x, pt.y, dotR, 0, 2 * Math.PI);
         ctx.fillStyle = '#ffffff';
         ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.55)';
+        ctx.stroke();
       }
     }
   }
 
-  // 3. Draw Joint Angles Overlay
+  // 4. Draw Joint Angles Overlay (Clean Badges, Leader Lines & Indicator Arcs)
   if (showAngles) {
     drawLiveJointAngles(getPt);
   }
 
-  // 4. Draw 4 Biometric Dimensions: Total Stature, Sitting Height, Leg Length, Wingspan
+  // 5. Draw 4 Biometric Dimensions: Total Stature, Sitting Height, Leg Length, Wingspan
   if (showDimensions) {
     drawLiveBiometricDimensions(getPt);
   }
@@ -830,76 +1049,151 @@ function renderFullBiomechanicalOverlay(kp) {
   ctx.restore();
 }
 
-// Draw Angles for Key Joints with arcs & badges
+// Draw Angles for Key Joints matching Aventuz Academy Screenshots
 function drawLiveJointAngles(getPt) {
-  const joints = [
-    // Elbows
-    { label: 'آرنج چ', p1: LM.LEFT_SHOULDER, v: LM.LEFT_ELBOW, p2: LM.LEFT_WRIST, color: '#facc15' },
-    { label: 'آرنج ر', p1: LM.RIGHT_SHOULDER, v: LM.RIGHT_ELBOW, p2: LM.RIGHT_WRIST, color: '#facc15' },
-    // Knees
-    { label: 'زانو چ', p1: LM.LEFT_HIP, v: LM.LEFT_KNEE, p2: LM.LEFT_ANKLE, color: '#4ade80' },
-    { label: 'زانو ر', p1: LM.RIGHT_HIP, v: LM.RIGHT_KNEE, p2: LM.RIGHT_ANKLE, color: '#4ade80' },
-    // Hips
-    { label: 'لگن چ', p1: LM.LEFT_SHOULDER, v: LM.LEFT_HIP, p2: LM.LEFT_KNEE, color: '#38bdf8' },
-    { label: 'لگن ر', p1: LM.RIGHT_SHOULDER, v: LM.RIGHT_HIP, p2: LM.RIGHT_KNEE, color: '#38bdf8' },
-    // Shoulders
-    { label: 'شانه چ', p1: LM.LEFT_ELBOW, v: LM.LEFT_SHOULDER, p2: LM.LEFT_HIP, color: '#c084fc' },
-    { label: 'شانه ر', p1: LM.RIGHT_ELBOW, v: LM.RIGHT_SHOULDER, p2: LM.RIGHT_HIP, color: '#c084fc' }
-  ];
+  const lSh = getPt(LM.LEFT_SHOULDER), rSh = getPt(LM.RIGHT_SHOULDER);
+  const lEl = getPt(LM.LEFT_ELBOW), rEl = getPt(LM.RIGHT_ELBOW);
+  const lWr = getPt(LM.LEFT_WRIST), rWr = getPt(LM.RIGHT_WRIST);
+  const lHp = getPt(LM.LEFT_HIP), rHp = getPt(LM.RIGHT_HIP);
+  const lKn = getPt(LM.LEFT_KNEE), rKn = getPt(LM.RIGHT_KNEE);
+  const lAk = getPt(LM.LEFT_ANKLE), rAk = getPt(LM.RIGHT_ANKLE);
+  const nose = getPt(LM.NOSE);
 
-  joints.forEach(j => {
-    const p1 = getPt(j.p1);
-    const v = getPt(j.v);
-    const p2 = getPt(j.p2);
+  // 1. Head / Neck Tilt Badge (e.g. 8° or 6°)
+  if (nose && (lSh || rSh)) {
+    const midShX = ((lSh?.x || 0) + (rSh?.x || 0)) / ((lSh ? 1 : 0) + (rSh ? 1 : 0));
+    const midShY = ((lSh?.y || 0) + (rSh?.y || 0)) / ((lSh ? 1 : 0) + (rSh ? 1 : 0));
+    const headTilt = Math.abs(Math.round(Math.atan2(nose.x - midShX, midShY - nose.y) * 180 / Math.PI));
+    drawAngleBadge({ x: nose.x, y: nose.y - 12 }, headTilt, 0, -26, '#38bdf8');
+  }
 
-    if (p1 && v && p2) {
-      const angle = Math.round(calcAngle(p1, v, p2));
+  // 2. Torso / Pelvic Tilt Badge (e.g. 3° or 5°)
+  if (lHp && rHp) {
+    const pelvicTilt = Math.abs(Math.round(Math.atan2(rHp.y - lHp.y, rHp.x - lHp.x) * 180 / Math.PI));
+    const midHp = { x: (lHp.x + rHp.x) / 2, y: (lHp.y + rHp.y) / 2 };
+    drawAngleBadge(midHp, pelvicTilt, 0, -18, '#34d399');
+  }
 
-      // Draw Arc around joint vertex
-      const a1 = Math.atan2(p1.y - v.y, p1.x - v.x);
-      const a2 = Math.atan2(p2.y - v.y, p2.x - v.x);
+  // 3. Right Elbow (Angle & Arc)
+  if ((visualSettings.armTrack === 'both' || visualSettings.armTrack === 'right') && rSh && rEl && rWr) {
+    const rElbowAngle = calcAngle(rSh, rEl, rWr);
+    drawJointArc(rEl, rSh, rWr);
+    drawAngleBadge(rEl, rElbowAngle, -46, -14, '#f43f5e');
+  }
 
-      ctx.save();
-      ctx.beginPath();
-      ctx.strokeStyle = j.color;
-      ctx.lineWidth = 2.5;
-      ctx.arc(v.x, v.y, 22, a1, a2, false);
-      ctx.stroke();
+  // 4. Left Elbow (Angle & Arc)
+  if ((visualSettings.armTrack === 'both' || visualSettings.armTrack === 'left') && lSh && lEl && lWr) {
+    const lElbowAngle = calcAngle(lSh, lEl, lWr);
+    drawJointArc(lEl, lSh, lWr);
+    drawAngleBadge(lEl, lElbowAngle, 46, -14, '#f59e0b');
+  }
 
-      // Draw Badge Label
-      drawAngleBadge(v.x + 24, v.y - 12, `${j.label}: ${angle}°`, j.color);
-      ctx.restore();
-    }
-  });
+  // 5. Right Knee (Angle & Arc)
+  if (rHp && rKn && rAk) {
+    const rKneeAngle = calcAngle(rHp, rKn, rAk);
+    drawJointArc(rKn, rHp, rAk);
+    drawAngleBadge(rKn, rKneeAngle, -48, -10, '#f43f5e');
+  }
+
+  // 6. Left Knee (Angle & Arc)
+  if (lHp && lKn && lAk) {
+    const lKneeAngle = calcAngle(lHp, lKn, lAk);
+    drawJointArc(lKn, lHp, lAk);
+    drawAngleBadge(lKn, lKneeAngle, 48, -10, '#10b981');
+  }
+
+  // 7. Right Ankle
+  const rFoot = getPt(LM.RIGHT_FOOT_INDEX) || rAk;
+  if (rKn && rAk && rFoot) {
+    const rAnkleAngle = calcAngle(rKn, rAk, rFoot);
+    drawJointArc(rAk, rKn, rFoot, 12);
+    drawAngleBadge(rAk, rAnkleAngle, 42, -10, '#94a3b8');
+  }
+
+  // 8. Left Ankle
+  const lFoot = getPt(LM.LEFT_FOOT_INDEX) || lAk;
+  if (lKn && lAk && lFoot) {
+    const lAnkleAngle = calcAngle(lKn, lAk, lFoot);
+    drawJointArc(lAk, lKn, lFoot, 12);
+    drawAngleBadge(lAk, lAnkleAngle, -42, -10, '#94a3b8');
+  }
 }
 
-function drawAngleBadge(x, y, text, color) {
+// Draw Arc around joint vertex with circular indicator dot
+function drawJointArc(v, p1, p2, radius = 16) {
+  if (!v || !p1 || !p2) return;
+  const a1 = Math.atan2(p1.y - v.y, p1.x - v.x);
+  const a2 = Math.atan2(p2.y - v.y, p2.x - v.x);
+
   ctx.save();
-  ctx.font = 'bold 11px Tahoma, sans-serif';
-  const textWidth = ctx.measureText(text).width;
-  const pad = 6;
-  const w = textWidth + pad * 2;
-  const h = 20;
-
-  // Clamp within canvas boundaries
-  const badgeX = Math.max(10, Math.min(canvasEl.width - w - 10, x));
-  const badgeY = Math.max(25, Math.min(canvasEl.height - 15, y));
-
-  // Background box
-  ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
   ctx.beginPath();
-  ctx.roundRect(badgeX, badgeY - 14, w, h, 6);
-  ctx.fill();
-
-  // Border
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+  ctx.lineWidth = 1.4;
+  ctx.arc(v.x, v.y, radius, a1, a2, false);
   ctx.stroke();
 
-  // Text
-  ctx.fillStyle = '#f8fafc';
-  ctx.textAlign = 'left';
-  ctx.fillText(text, badgeX + pad, badgeY);
+  // White indicator ring on the arc
+  const midAngle = (a1 + a2) / 2;
+  const ix = v.x + Math.cos(midAngle) * radius;
+  const iy = v.y + Math.sin(midAngle) * radius;
+  ctx.beginPath();
+  ctx.arc(ix, iy, 2.8, 0, 2 * Math.PI);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Draw Dark Glass Capsule Badge with Crisp Bold Degree & Leader Line
+function drawAngleBadge(v, angleDeg, leaderDx = 35, leaderDy = -15, badgeColor = null) {
+  if (!v) return;
+
+  const rawAngle = Math.round(angleDeg);
+  const displayDeg = visualSettings.showComplementAngle ? Math.round(360 - rawAngle) : rawAngle;
+  const text = `${displayDeg}°`;
+
+  ctx.save();
+  ctx.font = 'bold 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  const tw = ctx.measureText(text).width;
+  const bw = Math.max(38, Math.round(tw + 14));
+  const bh = 22;
+
+  let bx = v.x + leaderDx;
+  let by = v.y + leaderDy;
+
+  // Keep badge within canvas
+  bx = Math.max(6, Math.min(canvasEl.width - bw - 6, bx));
+  by = Math.max(12, Math.min(canvasEl.height - bh - 6, by));
+
+  // 1. Leader Line
+  ctx.beginPath();
+  ctx.moveTo(v.x, v.y);
+  const attachX = bx > v.x ? bx : bx + bw;
+  const attachY = by + bh / 2;
+  ctx.lineTo(attachX, attachY);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // 2. Dark glass capsule badge
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, bh, 6);
+  ctx.fill();
+
+  // 3. Subtle border
+  ctx.strokeStyle = badgeColor || 'rgba(255, 255, 255, 0.32)';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+
+  // 4. Crisp White Bold Degree
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, bx + bw / 2, by + bh / 2 + 0.5);
+
   ctx.restore();
 }
 
@@ -1283,23 +1577,189 @@ function initUIEvents() {
         anthro: 'viewAnthro',
         run5m: 'viewRun5m',
         jump: 'viewJump',
+        longJump: 'viewLongJump',
+        plank: 'viewPlank',
         pushup: 'viewPushup',
         situp: 'viewSitup',
-        squat: 'viewSquat'
+        squat: 'viewSquat',
+        lunge: 'viewLunge'
       };
       const titleMap = {
         anthro: '📐 ۱۰ شاخص پیکرسنجی هندبال',
         run5m: '⚡ آزمون شتاب و دوی ۵ متر',
         jump: '🦘 آزمون پرش متوالی بوسکو (Ergojump)',
+        longJump: '🚀 آزمون پرش طول درجا (Standing Long Jump)',
+        plank: '🧘 آزمون استقامت تنه و عضلات کور (Plank)',
         pushup: '💪 آزمون استقامت بالاتنه شنا سوئدی',
         situp: '🤸 آزمون قدرت مرکز تنه درازنشست',
-        squat: '🦵 آزمون کینماتیک اسکات و لانج'
+        squat: '🦵 آزمون کینماتیک اسکات عمیق (Deep Squat)',
+        lunge: '🚶‍♂️ آزمون تخصصی لانژ (Lunge Analysis)'
       };
       const targetView = document.getElementById(viewMap[currentMode]);
       if (targetView) targetView.style.display = 'block';
       const pTitle = document.getElementById('panelTitleText');
       if (pTitle) pTitle.textContent = titleMap[currentMode];
     });
+  });
+
+  // Standing Long Jump Handlers
+  document.getElementById('btnLongJumpReset')?.addEventListener('click', () => {
+    testsData.longJump.baselineX = null;
+    testsData.longJump.distanceCm = 0;
+    testsData.longJump.state = 'standing';
+    const distEl = document.getElementById('valLongJumpDist');
+    const phaseEl = document.getElementById('valLongJumpPhase');
+    if (distEl) distEl.textContent = '0.0 cm';
+    if (phaseEl) phaseEl.textContent = 'مبدا جدید کالیبره شد • آماده جهش';
+  });
+  document.getElementById('btnLongJumpSave')?.addEventListener('click', () => {
+    const dist = testsData.longJump.bestDist || testsData.longJump.distanceCm || 0;
+    alert(`✅ رکورد پرش طول درجا: ${dist} cm برای ${athlete.name} ثبت گردید.`);
+  });
+
+  // Plank Endurance Test Handlers
+  document.getElementById('btnPlankStartPause')?.addEventListener('click', () => {
+    testsData.plank.isRunning = !testsData.plank.isRunning;
+    const btn = document.getElementById('btnPlankStartPause');
+    if (testsData.plank.isRunning) {
+      if (btn) btn.textContent = 'مکث تایمر';
+      if (!testsData.plank.timerInterval) {
+        testsData.plank.timerInterval = setInterval(() => {
+          if (testsData.plank.isRunning) {
+            testsData.plank.timeSec++;
+            const timerEl = document.getElementById('valPlankTimer');
+            if (timerEl) timerEl.textContent = formatTimer(testsData.plank.timeSec);
+          }
+        }, 1000);
+      }
+    } else {
+      if (btn) btn.textContent = 'ادامه تایمر';
+    }
+  });
+  document.getElementById('btnPlankReset')?.addEventListener('click', () => {
+    testsData.plank.isRunning = false;
+    if (testsData.plank.timerInterval) {
+      clearInterval(testsData.plank.timerInterval);
+      testsData.plank.timerInterval = null;
+    }
+    testsData.plank.timeSec = 0;
+    const timerEl = document.getElementById('valPlankTimer');
+    const btn = document.getElementById('btnPlankStartPause');
+    if (timerEl) timerEl.textContent = '00:00';
+    if (btn) btn.textContent = 'شروع / مکث تایمر';
+  });
+  document.getElementById('btnPlankSave')?.addEventListener('click', () => {
+    alert(`✅ رکورد استقامت پلانک: ${formatTimer(testsData.plank.timeSec)} برای ${athlete.name} ثبت گردید.`);
+  });
+
+  // Deep Squat Handlers
+  document.getElementById('btnSquatReset')?.addEventListener('click', () => {
+    testsData.squat.reps = 0;
+    const repsEl = document.getElementById('valSquatReps');
+    if (repsEl) repsEl.textContent = '0';
+  });
+  document.getElementById('btnSquatSave')?.addEventListener('click', () => {
+    alert(`✅ رکورد اسکات عمیق: ${testsData.squat.reps} تکرار برای ${athlete.name} ثبت گردید.`);
+  });
+
+  // Lunge Handlers
+  document.getElementById('btnLungeReset')?.addEventListener('click', () => {
+    testsData.lunge.reps = 0;
+    const repsEl = document.getElementById('valLungeReps');
+    if (repsEl) repsEl.textContent = '0';
+  });
+  document.getElementById('btnLungeSave')?.addEventListener('click', () => {
+    alert(`✅ رکورد آزمون لانژ: ${testsData.lunge.reps} تکرار برای ${athlete.name} ثبت گردید.`);
+  });
+
+  // Visual Biomechanical Settings Modal (Matches Aventuz Images 2 & 3)
+  const visualModal = document.getElementById('modalVisualSettings');
+  const openVisualSettings = () => {
+    const rInput = document.getElementById('inputJointRadius');
+    const rLbl = document.getElementById('lblJointRadius');
+    if (rInput) rInput.value = visualSettings.jointRadius;
+    if (rLbl) rLbl.textContent = `${visualSettings.jointRadius} px`;
+
+    const wInput = document.getElementById('inputLineWidth');
+    const wLbl = document.getElementById('lblLineWidth');
+    if (wInput) wInput.value = visualSettings.lineWidth;
+    if (wLbl) wLbl.textContent = `${visualSettings.lineWidth} px`;
+
+    const compChk = document.getElementById('chkComplementAngle');
+    if (compChk) compChk.checked = !!visualSettings.showComplementAngle;
+
+    const boxChk = document.getElementById('chkTorsoBox');
+    if (boxChk) boxChk.checked = !!visualSettings.showTorsoBox;
+
+    const elbInput = document.getElementById('inputElbowTarget');
+    const elbLbl = document.getElementById('lblElbowTarget');
+    if (elbInput) elbInput.value = visualSettings.elbowTarget;
+    if (elbLbl) elbLbl.textContent = `${visualSettings.elbowTarget}° (تلرانس ±${visualSettings.elbowTolerance}°)`;
+
+    const kneeInput = document.getElementById('inputKneeTarget');
+    const kneeLbl = document.getElementById('lblKneeTarget');
+    if (kneeInput) kneeInput.value = visualSettings.kneeTarget;
+    if (kneeLbl) kneeLbl.textContent = `${visualSettings.kneeTarget}°`;
+
+    const lungeInput = document.getElementById('inputLungeRearTarget');
+    const lungeLbl = document.getElementById('lblLungeRearTarget');
+    if (lungeInput) lungeInput.value = visualSettings.lungeRearTarget;
+    if (lungeLbl) lungeLbl.textContent = `${visualSettings.lungeRearTarget}°`;
+
+    document.querySelectorAll('.arm-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.arm === visualSettings.armTrack);
+    });
+
+    visualModal?.classList.add('active');
+  };
+
+  document.getElementById('btnOpenVisualControls')?.addEventListener('click', openVisualSettings);
+  document.getElementById('btnCloseVisualSettings')?.addEventListener('click', () => visualModal?.classList.remove('active'));
+
+  // Live slider events
+  document.getElementById('inputJointRadius')?.addEventListener('input', (e) => {
+    visualSettings.jointRadius = parseFloat(e.target.value);
+    const lbl = document.getElementById('lblJointRadius');
+    if (lbl) lbl.textContent = `${visualSettings.jointRadius} px`;
+  });
+  document.getElementById('inputLineWidth')?.addEventListener('input', (e) => {
+    visualSettings.lineWidth = parseFloat(e.target.value);
+    const lbl = document.getElementById('lblLineWidth');
+    if (lbl) lbl.textContent = `${visualSettings.lineWidth} px`;
+  });
+  document.getElementById('chkComplementAngle')?.addEventListener('change', (e) => {
+    visualSettings.showComplementAngle = e.target.checked;
+  });
+  document.getElementById('chkTorsoBox')?.addEventListener('change', (e) => {
+    visualSettings.showTorsoBox = e.target.checked;
+  });
+  document.getElementById('inputElbowTarget')?.addEventListener('input', (e) => {
+    visualSettings.elbowTarget = parseInt(e.target.value);
+    const lbl = document.getElementById('lblElbowTarget');
+    if (lbl) lbl.textContent = `${visualSettings.elbowTarget}° (تلرانس ±${visualSettings.elbowTolerance}°)`;
+  });
+  document.getElementById('inputKneeTarget')?.addEventListener('input', (e) => {
+    visualSettings.kneeTarget = parseInt(e.target.value);
+    const lbl = document.getElementById('lblKneeTarget');
+    if (lbl) lbl.textContent = `${visualSettings.kneeTarget}°`;
+  });
+  document.getElementById('inputLungeRearTarget')?.addEventListener('input', (e) => {
+    visualSettings.lungeRearTarget = parseInt(e.target.value);
+    const lbl = document.getElementById('lblLungeRearTarget');
+    if (lbl) lbl.textContent = `${visualSettings.lungeRearTarget}°`;
+  });
+
+  document.querySelectorAll('.arm-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.arm-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      visualSettings.armTrack = btn.dataset.arm;
+    });
+  });
+
+  document.getElementById('btnApplyVisualSettings')?.addEventListener('click', () => {
+    saveVisualSettingsToStorage();
+    visualModal?.classList.remove('active');
   });
 
   // Stature Calibrate Button
@@ -1445,9 +1905,12 @@ function renderReportTables() {
   const testRows = [
     { name: 'دوی ۵ متر شتاب هندبال', record: `${testsData.run5m.time.toFixed(2)}s`, metric: `سرعت: ${testsData.run5m.speed} m/s`, rating: 'شتاب انفجاری عالی' },
     { name: 'پرش متوالی ارگوجامپ بوسکو', record: `${testsData.jump.reps} پرش (${testsData.jump.maxHeight}cm)`, metric: `توان: ${testsData.jump.power} W/kg`, rating: 'پتانسیل پرش ممتاز' },
-    { name: 'شنا سوئدی (Push-up)', record: `${testsData.pushup.reps} تکرار`, metric: 'عمق آرنج < ۹۰ درجه', rating: 'استقامت کمربند شانه عالی' },
-    { name: 'درازنشست (Sit-up)', record: `${testsData.situp.reps} تکرار`, metric: 'دامنه ۷۰ درجه', rating: 'ثبات مرکز تنه مطلوب' },
-    { name: 'اسکات و لانج عملکردی', record: `${testsData.squat.reps} تکرار`, metric: 'تراز زانو و پنجه', rating: 'بدون ریسک آسیب والگوس' }
+    { name: 'پرش طول درجا (Standing Long Jump)', record: `${testsData.longJump.bestDist || testsData.longJump.distanceCm || 0} cm`, metric: `زاویه آماده‌سازی: ${testsData.longJump.prepAngle}°`, rating: 'انفجار عضلات پا ممتاز' },
+    { name: 'استقامت تنه و پلانک (Plank)', record: `${formatTimer(testsData.plank.timeSec)}`, metric: `راستای تنه: ${testsData.plank.curAngle}°`, rating: testsData.plank.status === 'good' ? 'تراز ستون فقرات عالی' : 'نیاز به تقویت کور' },
+    { name: 'شنا سوئدی (Push-up)', record: `${testsData.pushup.reps} تکرار`, metric: `زاویه آرنج: ${testsData.pushup.curAngle}°`, rating: 'استقامت کمربند شانه عالی' },
+    { name: 'درازنشست (Sit-up)', record: `${testsData.situp.reps} تکرار`, metric: `دامنه حرکت: ${testsData.situp.curAngle}°`, rating: 'ثبات مرکز تنه مطلوب' },
+    { name: 'اسکات عمیق (Deep Squat)', record: `${testsData.squat.reps} تکرار`, metric: `زاویه زانو: ${testsData.squat.curAngle}°`, rating: testsData.squat.isValgus ? 'هشدار والگوس' : 'تراز زانو و پنجه عالی' },
+    { name: 'آزمون تخصصی لانژ (Lunge)', record: `${testsData.lunge.reps} تکرار`, metric: `جلویی: ${testsData.lunge.frontKnee}° / عقبی: ${testsData.lunge.rearKnee}°`, rating: 'هماهنگی و تقارن دوطرفه ممتاز' }
   ];
 
   const tBodyTests = document.getElementById('rptTestsTableBody');
@@ -1505,9 +1968,12 @@ function exportExcelReport() {
 
   csv += `آزمون میدانی,دوی ۵ متر شتاب,${testsData.run5m.time.toFixed(2)}s,سرعت: ${testsData.run5m.speed} m/s,شتاب عالی\r\n`;
   csv += `آزمون میدانی,پرش متوالی ارگوجامپ,${testsData.jump.reps} پرش (${testsData.jump.maxHeight}cm),توان: ${testsData.jump.power} W/kg,پتانسیل پرش ممتاز\r\n`;
+  csv += `آزمون میدانی,پرش طول درجا,${testsData.longJump.bestDist || testsData.longJump.distanceCm || 0} cm,انفجار عضلات پا,نخبه\r\n`;
+  csv += `آزمون میدانی,استقامت تنه و پلانک,${formatTimer(testsData.plank.timeSec)},راستای تنه ${testsData.plank.curAngle}°,${testsData.plank.status === 'good' ? 'تراز عالی' : 'ثبات کور'}\r\n`;
   csv += `آزمون میدانی,شنا سوئدی,${testsData.pushup.reps} تکرار,عمق آرنج < ۹۰°,استقامت شانه عالی\r\n`;
   csv += `آزمون میدانی,درازنشست,${testsData.situp.reps} تکرار,دامنه ۷۰°,ثبات مرکز تنه مطلوب\r\n`;
-  csv += `آزمون میدانی,اسکات و لانج,${testsData.squat.reps} تکرار,تراز زانو و پنجه,بدون والگوس\r\n`;
+  csv += `آزمون میدانی,اسکات عمیق,${testsData.squat.reps} تکرار,زاویه زانو ${testsData.squat.curAngle}°,${testsData.squat.isValgus ? 'والگوس' : 'تراز پنجه و زانو'}\r\n`;
+  csv += `آزمون میدانی,آزمون تخصصی لانژ,${testsData.lunge.reps} تکرار,زانو جلو ${testsData.lunge.frontKnee}° / عقب ${testsData.lunge.rearKnee}°,تقارن حرکتی عالی\r\n`;
 
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);

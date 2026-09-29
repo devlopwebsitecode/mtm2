@@ -509,6 +509,9 @@
             <button type="button" id="toggleDimensions" class="btn-header" style="background: rgba(34, 197, 94, 0.25); border-color: #4ade80; color: #bbf7d0; font-size: 10px; padding: 2px 6px;" title="قد و ابعاد">
               <span>📏 ابعاد</span>
             </button>
+            <button type="button" id="btnOpenVisualControls" class="btn-header" style="background: rgba(56, 189, 248, 0.2); border-color: #38bdf8; color: #38bdf8; font-size: 10px; padding: 2px 6px;" title="تنظیمات بصری مفاصل و زوایا">
+              <span>🎛️ تنظیمات زاویه</span>
+            </button>
           </div>
           <div id="aiStatusBadge" style="display: flex; align-items: center; gap: 4px; font-size: 10px; color: #38bdf8;">
             <span id="aiStatusDot" style="width: 7px; height: 7px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 6px #22c55e; display: inline-block;"></span>
@@ -593,10 +596,10 @@
       <!-- QUAD 3: Kinematic Tests Selector & Live Monitor (Bottom-Right in RTL) -->
       <section class="quad-cell" id="quadTests">
         <div class="quad-header">
-          <span id="panelTitleText">⚡ انتخاب آزمون حرکتی و کینماتیک</span>
+          <span id="panelTitleText">⚡ آزمون‌های حرکتی و کینماتیک بیومکانیک</span>
         </div>
         <div class="quad-body">
-          <!-- Mode Bar -->
+          <!-- Mode Bar (Separated Squat & Lunge, Added Standing Long Jump & Plank) -->
           <nav class="mode-bar" id="modeBar">
             <button type="button" class="mode-pill active" data-mode="anthro">
               <span>📐 پیکرسنجی</span>
@@ -605,7 +608,13 @@
               <span>⚡ دوی ۵ متر</span>
             </button>
             <button type="button" class="mode-pill" data-mode="jump">
-              <span>🦘 پرش متوالی</span>
+              <span>🦘 پرش بوسکو</span>
+            </button>
+            <button type="button" class="mode-pill" data-mode="longJump">
+              <span>🚀 پرش طول درجا</span>
+            </button>
+            <button type="button" class="mode-pill" data-mode="plank">
+              <span>🧘 آزمون پلانک</span>
             </button>
             <button type="button" class="mode-pill" data-mode="pushup">
               <span>💪 شنا سوئدی</span>
@@ -614,7 +623,10 @@
               <span>🤸 درازنشست</span>
             </button>
             <button type="button" class="mode-pill" data-mode="squat">
-              <span>🦵 اسکات و لانج</span>
+              <span>🦵 اسکات عمیق</span>
+            </button>
+            <button type="button" class="mode-pill" data-mode="lunge">
+              <span>🚶‍♂️ آزمون لانژ</span>
             </button>
           </nav>
 
@@ -671,6 +683,49 @@
             </div>
           </div>
 
+          <!-- NEW: Standing Long Jump View (پرش طول درجا) -->
+          <div id="viewLongJump" class="mode-view" style="display: none;">
+            <div class="metric-grid">
+              <div class="metric-card">
+                <span class="metric-label">مسافت پرش طول افقی</span>
+                <div class="metric-val accent" id="valLongJumpDist" style="font-size: 22px;">0.0 cm</div>
+              </div>
+              <div class="metric-card">
+                <span class="metric-label">زاویه فلکشن زانو در آماده‌سازی</span>
+                <div class="metric-val" id="valLongJumpAngle">--°</div>
+              </div>
+            </div>
+            <div style="background: rgba(30, 41, 59, 0.7); padding: 6px; border-radius: 8px; border: 1px solid #334155; font-size: 10.5px; margin-bottom: 6px;">
+              فاز پرش: <strong id="valLongJumpPhase" style="color: #38bdf8;">ایستادن در نقطه مبدا</strong> • بهترین رکورد: <strong id="valLongJumpBest" style="color: #4ade80;">-- cm</strong>
+            </div>
+            <div class="btn-row">
+              <button type="button" id="btnLongJumpReset" class="btn-act secondary">صفر کردن مبدا</button>
+              <button type="button" id="btnLongJumpSave" class="btn-act">ثبت رکورد پرش طول</button>
+            </div>
+          </div>
+
+          <!-- NEW: Plank Endurance Test View (آزمون استقامت پلانک) -->
+          <div id="viewPlank" class="mode-view" style="display: none;">
+            <div class="metric-grid">
+              <div class="metric-card">
+                <span class="metric-label">زمان استقامت پلانک</span>
+                <div class="metric-val accent" id="valPlankTimer" style="font-size: 24px;">00:00</div>
+              </div>
+              <div class="metric-card">
+                <span class="metric-label">راستای ستون فقرات و تنه</span>
+                <div class="metric-val" id="valPlankAngle">--°</div>
+              </div>
+            </div>
+            <div style="background: rgba(30, 41, 59, 0.7); padding: 6px; border-radius: 8px; border: 1px solid #334155; font-size: 10.5px; margin-bottom: 6px; text-align: center;">
+              وضعیت ثبات تنه: <strong id="valPlankStatus" style="color: #4ade80;">آماده شروع پلانک</strong>
+            </div>
+            <div class="btn-row">
+              <button type="button" id="btnPlankStartPause" class="btn-act">شروع / مکث تایمر</button>
+              <button type="button" id="btnPlankReset" class="btn-act secondary">صفر کردن</button>
+              <button type="button" id="btnPlankSave" class="btn-act" style="background: #15803d; border-color: #22c55e;">ثبت رکورد</button>
+            </div>
+          </div>
+
           <!-- Pushup View -->
           <div id="viewPushup" class="mode-view" style="display: none;">
             <div class="metric-grid">
@@ -713,7 +768,7 @@
             </div>
           </div>
 
-          <!-- Squat View -->
+          <!-- STANDALONE: Deep Squat View (آزمون اسکات عمیق) -->
           <div id="viewSquat" class="mode-view" style="display: none;">
             <div class="metric-grid">
               <div class="metric-card">
@@ -721,13 +776,13 @@
                 <div class="metric-val accent" id="valSquatReps" style="font-size: 22px;">0</div>
               </div>
               <div class="metric-card">
-                <span class="metric-label">زاویه زانو</span>
+                <span class="metric-label">زاویه مفصل زانو</span>
                 <div class="metric-val" id="valSquatAngle">--°</div>
               </div>
             </div>
             <div style="background: rgba(30, 41, 59, 0.7); padding: 6px; border-radius: 8px; border: 1px solid #334155; font-size: 10.5px; margin-bottom: 6px;">
-              <div>عمق: <strong id="valSquatDepthStatus" style="color: #4ade80;">زاویه استاندارد ۹۰ درجه</strong></div>
-              <div style="margin-top: 2px;">تراز زانو: <strong id="valSquatValgusStatus" style="color: #38bdf8;">بدون انحراف والگوس</strong></div>
+              <div>عمق اسکات: <strong id="valSquatDepthStatus" style="color: #4ade80;">زاویه استاندارد ۹۰ درجه</strong></div>
+              <div style="margin-top: 2px;">تراز زانو و پنجه: <strong id="valSquatValgusStatus" style="color: #38bdf8;">بدون انحراف والگوس</strong></div>
             </div>
             <div class="btn-row">
               <button type="button" id="btnSquatReset" class="btn-act secondary">صفر کردن</button>
@@ -735,9 +790,34 @@
             </div>
           </div>
 
+          <!-- STANDALONE: Lunge Analysis View (آزمون تخصصی لانژ - منطبق بر تصویر ۱) -->
+          <div id="viewLunge" class="mode-view" style="display: none;">
+            <div class="metric-grid-3">
+              <div class="metric-card">
+                <span class="metric-label">تکرار لانژ</span>
+                <div class="metric-val accent" id="valLungeReps" style="font-size: 20px;">0</div>
+              </div>
+              <div class="metric-card">
+                <span class="metric-label">زانوی جلو (هدف ۹۰°)</span>
+                <div class="metric-val" id="valLungeFrontKnee">--°</div>
+              </div>
+              <div class="metric-card">
+                <span class="metric-label">زانوی عقب (هدف ۱۲۰°)</span>
+                <div class="metric-val" id="valLungeRearKnee">--°</div>
+              </div>
+            </div>
+            <div style="background: rgba(30, 41, 59, 0.7); padding: 6px; border-radius: 8px; border: 1px solid #334155; font-size: 10.5px; margin-bottom: 6px;">
+              شیب تنه: <strong id="valLungeTorso" style="color: #4ade80;">عمودی و مستقیم</strong> • کنترل زانو: <strong id="valLungeStability" style="color: #38bdf8;">تراز</strong>
+            </div>
+            <div class="btn-row">
+              <button type="button" id="btnLungeReset" class="btn-act secondary">صفر کردن</button>
+              <button type="button" id="btnLungeSave" class="btn-act">ثبت رکورد لانژ</button>
+            </div>
+          </div>
+
           <!-- Default Anthro Helper Note -->
           <div id="viewAnthroNote" style="background: rgba(30, 41, 59, 0.4); border: 1px dashed #334155; border-radius: 8px; padding: 8px; font-size: 11px; color: #94a3b8; line-height: 1.6; margin-top: 6px;">
-            ℹ️ هم‌اکنون حالت <strong>پیکرسنجی هندبال</strong> فعال است. شاخص‌های ۱۰گانه در بخش مجاور به صورت ریل‌تایم محاسبه می‌شوند. جهت ارزیابی میدانی روی تب‌های بالا (دوی ۵ متر، پرش و...) کلیک فرمایید.
+            ℹ️ هم‌اکنون حالت <strong>پیکرسنجی هندبال</strong> فعال است. شاخص‌های ۱۰گانه در بخش مجاور به صورت ریل‌تایم محاسبه می‌شوند. جهت ارزیابی میدانی روی تب‌های بالا کلیک فرمایید.
           </div>
         </div>
       </section>
@@ -960,6 +1040,104 @@
         <button type="button" id="btnDownloadExcel" class="btn-act" style="background: #15803d; border-color: #22c55e;">
           <span>📊</span>
           <span>دانلود جدول اکسل (Excel / CSV)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Visual & Biomechanical Settings Modal (Matches Aventuz Images 2 & 3) -->
+  <div id="modalVisualSettings" class="modal-overlay">
+    <div class="modal-card" style="max-width: 480px; background: #0b1120; border: 1.5px solid #10b981;">
+      <div class="modal-header">
+        <div class="modal-title" style="color: #34d399; display: flex; align-items: center; gap: 6px;">
+          <span>🎛️</span>
+          <span>تنظیمات زنده بیومکانیک (Live Analysis Controls)</span>
+        </div>
+        <button type="button" id="btnCloseVisualSettings" class="ctrl-btn" style="color: #f87171;">✕</button>
+      </div>
+
+      <!-- Settings Body -->
+      <div style="display: flex; flex-direction: column; gap: 12px; font-size: 11.5px; color: #cbd5e1;">
+        
+        <!-- Section: Visualisatie -->
+        <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid #1e293b; border-radius: 10px; padding: 12px;">
+          <h4 style="color: #38bdf8; font-size: 12px; margin-bottom: 8px;">🎨 تصویرسازی (Visualisatie)</h4>
+          
+          <div style="margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+              <span>اندازه نقاط مفاصل (Bolgrootte):</span>
+              <strong id="lblJointRadius" style="color: #34d399;">4.5 px</strong>
+            </div>
+            <input type="range" id="inputJointRadius" min="2" max="10" step="0.5" value="4.5" style="width: 100%; accent-color: #10b981;">
+          </div>
+
+          <div style="margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+              <span>ضخامت خطوط اسکلت (Lijndikte):</span>
+              <strong id="lblLineWidth" style="color: #34d399;">2.0 px</strong>
+            </div>
+            <input type="range" id="inputLineWidth" min="1" max="6" step="0.5" value="2.0" style="width: 100%; accent-color: #10b981;">
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 6px; border-top: 1px solid #1e293b;">
+            <span>نمایش زاویه در سمت دیگر مفصل (زاویه مکمل):</span>
+            <input type="checkbox" id="chkComplementAngle" style="width: 16px; height: 16px; accent-color: #10b981;">
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 8px; margin-top: 6px; border-top: 1px solid #1e293b;">
+            <span>کادر تراز بالاتنه و لگن (Torso Box):</span>
+            <input type="checkbox" id="chkTorsoBox" checked style="width: 16px; height: 16px; accent-color: #10b981;">
+          </div>
+        </div>
+
+        <!-- Section: Shoulders & Elbows -->
+        <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid #1e293b; border-radius: 10px; padding: 12px;">
+          <h4 style="color: #38bdf8; font-size: 12px; margin-bottom: 8px;">💪 تنظیمات زوایای اندام فوقانی (Ellebogen & Schouders)</h4>
+          
+          <div style="margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+              <span>زاویه هدف آرنج پرتابی / شنا:</span>
+              <strong id="lblElbowTarget" style="color: #facc15;">90° (تلرانس ±10°)</strong>
+            </div>
+            <input type="range" id="inputElbowTarget" min="45" max="150" step="5" value="90" style="width: 100%; accent-color: #facc15;">
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span>حالت پایش دست‌ها:</span>
+            <div style="display: flex; gap: 4px;">
+              <button type="button" class="btn-header arm-btn active" data-arm="both" style="font-size: 10px; padding: 2px 7px;">هر دو</button>
+              <button type="button" class="btn-header arm-btn" data-arm="right" style="font-size: 10px; padding: 2px 7px;">راست</button>
+              <button type="button" class="btn-header arm-btn" data-arm="left" style="font-size: 10px; padding: 2px 7px;">چپ</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: Knees & Hips (Squat & Lunge) -->
+        <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid #1e293b; border-radius: 10px; padding: 12px;">
+          <h4 style="color: #38bdf8; font-size: 12px; margin-bottom: 8px;">🦵 تنظیمات زوایای اسکات و لانژ (Knieën & Heupen)</h4>
+          
+          <div style="margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+              <span>زاویه مطلوب زانوی اسکات / لانژ جلو:</span>
+              <strong id="lblKneeTarget" style="color: #4ade80;">90°</strong>
+            </div>
+            <input type="range" id="inputKneeTarget" min="70" max="120" step="5" value="90" style="width: 100%; accent-color: #4ade80;">
+          </div>
+
+          <div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+              <span>زاویه مطلوب زانوی عقب در لانژ:</span>
+              <strong id="lblLungeRearTarget" style="color: #f43f5e;">120°</strong>
+            </div>
+            <input type="range" id="inputLungeRearTarget" min="90" max="145" step="5" value="120" style="width: 100%; accent-color: #f43f5e;">
+          </div>
+        </div>
+
+      </div>
+
+      <div class="btn-row" style="margin-top: 14px;">
+        <button type="button" id="btnApplyVisualSettings" class="btn-act" style="background: linear-gradient(135deg, #10b981, #059669);">
+          ذخیره و اعمال تنظیمات بیومکانیک
         </button>
       </div>
     </div>
